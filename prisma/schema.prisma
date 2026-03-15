@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Restaurant {
+  id            String            @id @default(uuid())
+  name          String
+  code          String            @unique
+  tables        RestaurantTable[]
+  areas         CoverageArea[]
+  buttons       Button[]
+  calls         Call[]
+  staffSessions StaffSession[]
+  createdAt     DateTime          @default(now())
+}
+
+model CoverageArea {
+  id           String            @id @default(uuid())
+  name         String
+  restaurantId String
+  restaurant   Restaurant        @relation(fields: [restaurantId], references: [id])
+  tables       RestaurantTable[]
+  createdAt    DateTime          @default(now())
+}
+
+model RestaurantTable {
+  id           String         @id @default(uuid())
+  name         String
+  restaurantId String
+  areaId       String?
+
+  restaurant   Restaurant     @relation(fields: [restaurantId], references: [id])
+  area         CoverageArea?  @relation(fields: [areaId], references: [id])
+
+  button       Button?
+  calls        Call[]
+  createdAt    DateTime       @default(now())
+}
+
+model Button {
+  id           String           @id
+  restaurantId String
+  tableId      String?          @unique
+
+  restaurant   Restaurant       @relation(fields: [restaurantId], references: [id])
+  table        RestaurantTable? @relation(fields: [tableId], references: [id])
+
+  createdAt    DateTime         @default(now())
+}
+
+model Call {
+  id           String          @id @default(uuid())
+  restaurantId String
+  tableId      String
+
+  restaurant   Restaurant      @relation(fields: [restaurantId], references: [id])
+  table        RestaurantTable @relation(fields: [tableId], references: [id])
+
+  status       String          @default("ACTIVE")
+  createdAt    DateTime        @default(now())
+  clearedAt    DateTime?
+}
+
+model StaffSession {
+  id           String     @id @default(uuid())
+  nickname     String
+  restaurantId String
+
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+
+  createdAt    DateTime   @default(now())
+}

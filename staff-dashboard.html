@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cue Staff Dashboard</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 32px;
+    }
+
+    .subtext {
+      color: #94a3b8;
+      margin-top: 6px;
+      font-size: 14px;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .refresh-btn {
+      background: #334155;
+      color: white;
+    }
+
+    .refresh-btn:hover {
+      background: #475569;
+    }
+
+    .status-pill {
+      display: inline-block;
+      background: #1e293b;
+      color: #93c5fd;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+    }
+
+    .error-box {
+      display: none;
+      background: #7f1d1d;
+      color: #fecaca;
+      border: 1px solid #b91c1c;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+    }
+
+    .empty-state {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 28px;
+      text-align: center;
+      color: #94a3b8;
+    }
+
+    .calls-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .call-card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .call-left {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .table-name {
+      font-size: 24px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .meta {
+      color: #94a3b8;
+      font-size: 14px;
+    }
+
+    .active-badge {
+      display: inline-block;
+      background: #7f1d1d;
+      color: #fecaca;
+      border: 1px solid #dc2626;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      width: fit-content;
+    }
+
+    .clear-btn {
+      background: #16a34a;
+      color: white;
+      min-width: 120px;
+      font-weight: 600;
+    }
+
+    .clear-btn:hover {
+      background: #15803d;
+    }
+
+    .clear-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .footer-note {
+      margin-top: 22px;
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    @media (max-width: 640px) {
+      .table-name {
+        font-size: 20px;
+      }
+
+      .call-card {
+        align-items: flex-start;
+      }
+
+      .clear-btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>Cue Staff Dashboard</h1>
+        <div class="subtext">Live view of active table calls</div>
+      </div>
+
+      <div class="top-actions">
+        <div class="status-pill" id="lastUpdated">Last updated: --</div>
+        <button class="refresh-btn" id="refreshBtn">Refresh</button>
+      </div>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <div id="content"></div>
+
+    <div class="footer-note">
+      Auto-refresh every 3 seconds
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = "http://localhost:3000";
+
+    const contentEl = document.getElementById("content");
+    const errorBoxEl = document.getElementById("errorBox");
+    const refreshBtnEl = document.getElementById("refreshBtn");
+    const lastUpdatedEl = document.getElementById("lastUpdated");
+
+    function showError(message) {
+      errorBoxEl.style.display = "block";
+      errorBoxEl.textContent = message;
+    }
+
+    function hideError() {
+      errorBoxEl.style.display = "none";
+      errorBoxEl.textContent = "";
+    }
+
+    function formatTime(isoString) {
+      if (!isoString) return "-";
+      const date = new Date(isoString);
+
+      return date.toLocaleString("fi-FI", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    }
+
+    function formatAgo(isoString) {
+      if (!isoString) return "-";
+
+      const now = new Date();
+      const created = new Date(isoString);
+      const diffMs = now - created;
+      const diffSec = Math.floor(diffMs / 1000);
+
+      if (diffSec < 60) return `${diffSec}s ago`;
+
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin} min ago`;
+
+      const diffHr = Math.floor(diffMin / 60);
+      return `${diffHr} h ago`;
+    }
+
+    function renderCalls(calls) {
+      if (!calls || calls.length === 0) {
+        contentEl.innerHTML = `
+          <div class="empty-state">
+            <h2 style="margin-top: 0; color: #f8fafc;">No active calls</h2>
+            <p style="margin-bottom: 0;">All tables are clear right now.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const cardsHtml = calls.map((call) => {
+        const tableName = call.restaurant_tables?.name || "Unknown table";
+
+        return `
+          <div class="call-card">
+            <div class="call-left">
+              <div class="active-badge">ACTIVE</div>
+              <div class="table-name">${tableName}</div>
+              <div class="meta">Created: ${formatTime(call.created_at)}</div>
+              <div class="meta">Waiting: ${formatAgo(call.created_at)}</div>
+              <div class="meta">Call ID: ${call.id}</div>
+            </div>
+
+            <div>
+              <button
+                class="clear-btn"
+                onclick="clearCall('${call.id}', this)"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      contentEl.innerHTML = `<div class="calls-list">${cardsHtml}</div>`;
+    }
+
+    async function fetchCalls() {
+      try {
+        hideError();
+
+        const response = await fetch(`${API_BASE_URL}/calls`);
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "Failed to fetch calls");
+        }
+
+        renderCalls(result.calls || []);
+        lastUpdatedEl.textContent = `Last updated: ${new Date().toLocaleTimeString("fi-FI")}`;
+      } catch (error) {
+        console.error("fetchCalls failed:", error);
+        showError(error.message || "Failed to fetch calls");
+      }
+    }
+
+    async function clearCall(callId, buttonEl) {
+      try {
+        hideError();
+        buttonEl.disabled = true;
+        buttonEl.textContent = "Clearing...";
+
+        const response = await fetch(`${API_BASE_URL}/calls/${callId}/clear`, {
+          method: "POST",
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "Failed to clear call");
+        }
+
+        await fetchCalls();
+      } catch (error) {
+        console.error("clearCall failed:", error);
+        showError(error.message || "Failed to clear call");
+        buttonEl.disabled = false;
+        buttonEl.textContent = "Clear";
+      }
+    }
+
+    refreshBtnEl.addEventListener("click", fetchCalls);
+
+    fetchCalls();
+    setInterval(fetchCalls, 3000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cue Admin – Tables & Buttons</title>
+
+<style>
+body{
+font-family:Arial;
+background:#0b1220;
+color:white;
+margin:40px;
+}
+
+.card{
+background:#111a2e;
+padding:20px;
+margin-bottom:15px;
+border-radius:10px;
+}
+
+button{
+padding:8px 14px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+}
+
+.assign{background:#facc15;}
+.add{background:#22c55e;}
+</style>
+
+</head>
+<body>
+
+<h1>Cue Admin</h1>
+<h2>Tables & Buttons</h2>
+
+<div id="tables"></div>
+
+<h3>Add Table</h3>
+
+<input id="tableName" placeholder="Table name">
+<button class="add" onclick="addTable()">Add</button>
+
+<h3>Assign Button</h3>
+
+<input id="buttonId" placeholder="button id">
+
+<select id="tableSelect"></select>
+
+<button class="assign" onclick="assignButton()">Assign</button>
+
+<script>
+
+async function loadTables(){
+
+const res = await fetch("http://localhost:3000/tables-with-buttons")
+
+const tables = await res.json()
+
+const container = document.getElementById("tables")
+
+container.innerHTML=""
+
+const select=document.getElementById("tableSelect")
+select.innerHTML=""
+
+tables.forEach(t=>{
+
+const div=document.createElement("div")
+div.className="card"
+
+div.innerHTML=`
+<b>${t.tableName}</b><br>
+button: ${t.buttonId || "none"}
+`
+
+container.appendChild(div)
+
+const option=document.createElement("option")
+option.value=t.tableId
+option.text=t.tableName
+
+select.appendChild(option)
+
+})
+
+}
+
+async function addTable(){
+
+const name=document.getElementById("tableName").value
+
+await fetch("http://localhost:3000/tables",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({name})
+})
+
+loadTables()
+
+}
+
+async function assignButton(){
+
+const buttonId=document.getElementById("buttonId").value
+const tableId=document.getElementById("tableSelect").value
+
+await fetch("http://localhost:3000/buttons/assign",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({buttonId,tableId})
+})
+
+loadTables()
+
+}
+
+loadTables()
+
+</script>
+
+</body>
+</html>

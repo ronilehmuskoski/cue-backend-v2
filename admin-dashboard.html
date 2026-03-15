@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cue Admin Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #0b0b0c;
+      --panel: #141416;
+      --panel-2: #1a1b1f;
+      --panel-3: #202127;
+      --border: rgba(255, 215, 130, 0.14);
+      --gold: #d4af37;
+      --gold-soft: #f0d78a;
+      --text: #f4f1e8;
+      --muted: #a6a09a;
+      --danger: #ff6b6b;
+      --danger-bg: rgba(255, 107, 107, 0.12);
+      --success: #44d17a;
+      --success-bg: rgba(68, 209, 122, 0.12);
+      --warning: #ffb84d;
+      --shadow: 0 16px 50px rgba(0, 0, 0, 0.4);
+      --radius: 18px;
+      --radius-sm: 12px;
+      --glow: 0 0 0 1px rgba(212, 175, 55, 0.16), 0 0 30px rgba(212, 175, 55, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background:
+        radial-gradient(circle at top right, rgba(212, 175, 55, 0.08), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(212, 175, 55, 0.05), transparent 22%),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100%;
+    }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 290px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: linear-gradient(180deg, rgba(20, 20, 22, 0.98), rgba(12, 12, 14, 0.98));
+      border-right: 1px solid var(--border);
+      padding: 28px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-title {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      color: var(--gold-soft);
+    }
+
+    .brand-subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .nav-button {
+      width: 100%;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+      padding: 14px 16px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-button:hover {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: var(--border);
+    }
+
+    .nav-button.active {
+      background: linear-gradient(180deg, rgba(212, 175, 55, 0.18), rgba(212, 175, 55, 0.08));
+      border-color: rgba(212, 175, 55, 0.28);
+      box-shadow: var(--glow);
+    }
+
+    .nav-badge {
+      min-width: 28px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      text-align: center;
+      color: #111;
+      background: var(--gold);
+      font-weight: 700;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+    }
+
+    .session-box {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .logout-btn {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #18181b;
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .logout-btn:hover {
+      border-color: rgba(212, 175, 55, 0.35);
+      box-shadow: var(--glow);
+    }
+
+    .main {
+      padding: 28px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .page-heading h1 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: -0.02em;
+    }
+
+    .page-heading p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 0 0 rgba(68, 209, 122, 0.7);
+      animation: pulse 1.8s infinite;
+    }
+
+    .grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .grid.two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(26, 27, 31, 0.98), rgba(18, 19, 23, 0.98));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .card-header {
+      padding: 18px 20px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .card-subtitle {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 6px;
+    }
+
+    .card-body {
+      padding: 18px 20px 20px;
+    }
+
+    .stat-card {
+      padding: 20px;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--gold-soft);
+    }
+
+    .section {
+      display: none;
+      animation: fadeIn 0.22s ease;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+    }
+
+    .form-grid.triple {
+      grid-template-columns: 1fr 1fr auto;
+    }
+
+    .input,
+    .select {
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #101114;
+      color: var(--text);
+      padding: 13px 14px;
+      border-radius: 14px;
+      outline: none;
+    }
+
+    .input:focus,
+    .select:focus {
+      border-color: rgba(212, 175, 55, 0.4);
+      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.08);
+    }
+
+    .btn {
+      border: none;
+      border-radius: 14px;
+      padding: 13px 16px;
+      cursor: pointer;
+      transition: transform 0.14s ease, opacity 0.14s ease, box-shadow 0.18s ease;
+      font-weight: 700;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(180deg, #e1bd4d, #c89f21);
+      color: #151515;
+      box-shadow: 0 10px 24px rgba(212, 175, 55, 0.2);
+    }
+
+    .btn-secondary {
+      background: #1b1c21;
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .btn-danger {
+      background: var(--danger-bg);
+      color: #ffc7c7;
+      border: 1px solid rgba(255, 107, 107, 0.24);
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .status-message {
+      min-height: 24px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .status-message.success {
+      color: #8ef0b4;
+    }
+
+    .status-message.error {
+      color: #ff9e9e;
+    }
+
+    .list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .list-empty {
+      padding: 20px;
+      border: 1px dashed rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      color: var(--muted);
+      text-align: center;
+      background: rgba(255, 255, 255, 0.015);
+    }
+
+    .item {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(31, 32, 38, 0.95), rgba(21, 22, 27, 0.98));
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 1.25fr 0.9fr 0.9fr auto;
+      gap: 14px;
+      align-items: center;
+      transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .item:hover {
+      border-color: rgba(212, 175, 55, 0.28);
+    }
+
+    .item.new-call {
+      box-shadow:
+        0 0 0 1px rgba(212, 175, 55, 0.26),
+        0 0 28px rgba(212, 175, 55, 0.12);
+      animation: softGlow 1.8s ease-in-out infinite alternate;
+    }
+
+    .item-left {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .item-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .item-meta {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .meta-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .meta-label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .meta-value {
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .wait-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 8px 12px;
+      width: fit-content;
+      font-size: 13px;
+      font-weight: 700;
+      border: 1px solid rgba(255, 184, 77, 0.22);
+      background: rgba(255, 184, 77, 0.12);
+      color: #ffd28a;
+    }
+
+    .assign-pill,
+    .unassign-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 6px 10px;
+      width: fit-content;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .assign-pill {
+      color: #93f0b4;
+      background: var(--success-bg);
+      border: 1px solid rgba(68, 209, 122, 0.24);
+    }
+
+    .unassign-pill {
+      color: #d2cfc7;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .table-simple {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .table-simple th,
+    .table-simple td {
+      text-align: left;
+      padding: 14px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      vertical-align: middle;
+    }
+
+    .table-simple th {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+    }
+
+    .table-simple td {
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .table-name {
+      font-weight: 700;
+    }
+
+    .small-muted {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .inline-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(68, 209, 122, 0.55);
+      }
+      70% {
+        box-shadow: 0 0 0 10px rgba(68, 209, 122, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(68, 209, 122, 0);
+      }
+    }
+
+    @keyframes softGlow {
+      from {
+        box-shadow:
+          0 0 0 1px rgba(212, 175, 55, 0.18),
+          0 0 18px rgba(212, 175, 55, 0.08);
+      }
+      to {
+        box-shadow:
+          0 0 0 1px rgba(212, 175, 55, 0.28),
+          0 0 36px rgba(212, 175, 55, 0.16);
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(5px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 1100px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: relative;
+        height: auto;
+      }
+
+      .grid.two,
+      .grid.three {
+        grid-template-columns: 1fr;
+      }
+
+      .item {
+        grid-template-columns: 1fr;
+      }
+
+      .form-grid,
+      .form-grid.triple {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .main {
+        padding: 18px;
+      }
+
+      .sidebar {
+        padding: 20px 16px;
+      }
+
+      .card-header,
+      .card-body,
+      .stat-card {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-title">CUE</div>
+        <div class="brand-subtitle">Premium restaurant service dashboard</div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-button active" data-section="calls-section" id="nav-calls">
+          <span>Calls</span>
+          <span class="nav-badge" id="activeCallsBadge">0</span>
+        </button>
+
+        <button class="nav-button" data-section="tables-section" id="nav-tables">
+          <span>Tables</span>
+        </button>
+
+        <button class="nav-button" data-section="buttons-section" id="nav-buttons">
+          <span>Buttons</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="session-box">
+          <div>Logged in</div>
+          <div id="sessionEmail" class="small-muted">Checking session...</div>
+        </div>
+        <button class="logout-btn" id="logoutBtn">Log out</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="page-heading">
+          <h1 id="pageTitle">Active Calls</h1>
+          <p id="pageSubtitle">Monitor incoming service requests in real time.</p>
+        </div>
+
+        <div class="topbar-right">
+          <div class="pill">
+            <span class="pulse-dot"></span>
+            <span>Live refresh</span>
+          </div>
+          <div class="pill" id="lastUpdatedPill">Updated just now</div>
+        </div>
+      </div>
+
+      <section class="section active" id="calls-section">
+        <div class="grid three" style="margin-bottom: 18px;">
+          <div class="card stat-card">
+            <div class="stat-label">Active calls</div>
+            <div class="stat-value" id="statActiveCalls">0</div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-label">Longest wait</div>
+            <div class="stat-value" id="statLongestWait">0m</div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-label">Latest call</div>
+            <div class="stat-value" id="statLatestCall" style="font-size: 22px;">—</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Live call queue</h2>
+              <div class="card-subtitle">Auto-refreshes every 2 seconds</div>
+            </div>
+            <button class="btn btn-secondary" id="refreshCallsBtn">Refresh now</button>
+          </div>
+          <div class="card-body">
+            <div class="status-row">
+              <div class="status-message" id="callsStatus"></div>
+            </div>
+            <div class="list" id="callsList"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="tables-section">
+        <div class="grid two">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Create table</h2>
+                <div class="card-subtitle">Add a new restaurant table to Cue</div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="status-message" id="tablesStatus"></div>
+              <div class="form-grid">
+                <input
+                  class="input"
+                  id="tableNameInput"
+                  type="text"
+                  placeholder="e.g. Table 12"
+                  autocomplete="off"
+                />
+                <button class="btn btn-primary" id="createTableBtn">Create table</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Tables overview</h2>
+                <div class="card-subtitle">Current tables in the restaurant</div>
+              </div>
+              <button class="btn btn-secondary" id="refreshTablesBtn">Refresh</button>
+            </div>
+            <div class="card-body">
+              <div id="tablesList"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="buttons-section">
+        <div class="grid two">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Assign button</h2>
+                <div class="card-subtitle">Link a physical Flic button to a table</div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="status-message" id="buttonsStatus"></div>
+              <div class="form-grid triple">
+                <input
+                  class="input"
+                  id="buttonIdInput"
+                  type="text"
+                  placeholder="Button ID / bdaddr"
+                  autocomplete="off"
+                />
+                <select class="select" id="assignTableSelect">
+                  <option value="">Select table</option>
+                </select>
+                <button class="btn btn-primary" id="assignButtonBtn">Assign</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Buttons overview</h2>
+                <div class="card-subtitle">Assigned and unassigned buttons</div>
+              </div>
+              <button class="btn btn-secondary" id="refreshButtonsBtn">Refresh</button>
+            </div>
+            <div class="card-body">
+              <div id="buttonsList"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://xbgvfbyhzvpwwpfwhhci.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_PD1G58QCYrh8MCoS2-1eVg_gaP9fElz";
+
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const DEFAULT_REFRESH_MS = 2000;
+
+    let callsData = [];
+    let tablesData = [];
+    let buttonsData = [];
+    let callsRefreshInterval = null;
+    let waitingClockInterval = null;
+
+    const elements = {
+      pageTitle: document.getElementById("pageTitle"),
+      pageSubtitle: document.getElementById("pageSubtitle"),
+      sessionEmail: document.getElementById("sessionEmail"),
+      logoutBtn: document.getElementById("logoutBtn"),
+
+      activeCallsBadge: document.getElementById("activeCallsBadge"),
+      lastUpdatedPill: document.getElementById("lastUpdatedPill"),
+
+      statActiveCalls: document.getElementById("statActiveCalls"),
+      statLongestWait: document.getElementById("statLongestWait"),
+      statLatestCall: document.getElementById("statLatestCall"),
+
+      callsList: document.getElementById("callsList"),
+      callsStatus: document.getElementById("callsStatus"),
+      refreshCallsBtn: document.getElementById("refreshCallsBtn"),
+
+      tablesStatus: document.getElementById("tablesStatus"),
+      tableNameInput: document.getElementById("tableNameInput"),
+      createTableBtn: document.getElementById("createTableBtn"),
+      tablesList: document.getElementById("tablesList"),
+      refreshTablesBtn: document.getElementById("refreshTablesBtn"),
+
+      buttonsStatus: document.getElementById("buttonsStatus"),
+      buttonIdInput: document.getElementById("buttonIdInput"),
+      assignTableSelect: document.getElementById("assignTableSelect"),
+      assignButtonBtn: document.getElementById("assignButtonBtn"),
+      buttonsList: document.getElementById("buttonsList"),
+      refreshButtonsBtn: document.getElementById("refreshButtonsBtn")
+    };
+
+    const pageMeta = {
+      "calls-section": {
+        title: "Active Calls",
+        subtitle: "Monitor incoming service requests in real time."
+      },
+      "tables-section": {
+        title: "Tables",
+        subtitle: "Create and manage restaurant tables."
+      },
+      "buttons-section": {
+        title: "Buttons",
+        subtitle: "Assign and remove Flic buttons."
+      }
+    };
+
+    function setStatus(el, message = "", type = "") {
+      el.textContent = message;
+      el.className = "status-message";
+      if (type) el.classList.add(type);
+    }
+
+    function formatTimeAgo(dateString) {
+      if (!dateString) return "—";
+      const date = new Date(dateString);
+      const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+
+      if (seconds < 5) return "just now";
+      if (seconds < 60) return `${seconds}s ago`;
+
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `${minutes}m ago`;
+
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `${hours}h ${minutes % 60}m ago`;
+
+      const days = Math.floor(hours / 24);
+      return `${days}d ago`;
+    }
+
+    function formatWaitingTime(dateString) {
+      if (!dateString) return "0m";
+      const date = new Date(dateString);
+      const totalSeconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+
+      if (minutes < 60) return `${minutes}m ${seconds}s`;
+
+      const hours = Math.floor(minutes / 60);
+      return `${hours}h ${minutes % 60}m`;
+    }
+
+    function formatClock(dateString) {
+      if (!dateString) return "—";
+      const date = new Date(dateString);
+      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+
+    function formatDateTime(dateString) {
+      if (!dateString) return "—";
+      const date = new Date(dateString);
+      return date.toLocaleString([], {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function getTableName(item) {
+      return (
+        item.table_name ||
+        item.restaurant_tables?.name ||
+        item.table?.name ||
+        item.tables?.name ||
+        item.name ||
+        "Unknown table"
+      );
+    }
+
+    function getButtonId(item) {
+      return item.button_id || item.buttonId || item.id || item.bdaddr || "";
+    }
+
+    function getCreatedAt(item) {
+      return item.created_at || item.createdAt || item.inserted_at || null;
+    }
+
+    function getCallId(item) {
+      return item.id;
+    }
+
+    function isNewCall(item) {
+      const createdAt = getCreatedAt(item);
+      if (!createdAt) return false;
+      return Date.now() - new Date(createdAt).getTime() < 45000;
+    }
+
+    async function apiFetch(url, options = {}) {
+      const response = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        },
+        ...options
+      });
+
+      let data = null;
+      const text = await response.text();
+
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        data = text;
+      }
+
+      if (!response.ok) {
+        const message =
+          (data && typeof data === "object" && (data.error || data.message)) ||
+          (typeof data === "string" && data) ||
+          `Request failed: ${response.status}`;
+        throw new Error(message);
+      }
+
+      return data;
+    }
+
+    function updateLastUpdatedLabel() {
+      elements.lastUpdatedPill.textContent = `Updated ${new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      })}`;
+    }
+
+    function renderCallStats() {
+      const activeCount = callsData.length;
+      elements.statActiveCalls.textContent = String(activeCount);
+      elements.activeCallsBadge.textContent = String(activeCount);
+
+      if (activeCount === 0) {
+        elements.statLongestWait.textContent = "0m";
+        elements.statLatestCall.textContent = "—";
+        return;
+      }
+
+      const sortedByCreated = [...callsData].sort((a, b) => {
+        return new Date(getCreatedAt(a)) - new Date(getCreatedAt(b));
+      });
+
+      const oldest = sortedByCreated[0];
+      const latest = sortedByCreated[sortedByCreated.length - 1];
+
+      elements.statLongestWait.textContent = formatWaitingTime(getCreatedAt(oldest));
+      elements.statLatestCall.textContent = getTableName(latest);
+    }
+
+    function renderCalls() {
+      renderCallStats();
+
+      if (!Array.isArray(callsData) || callsData.length === 0) {
+        elements.callsList.innerHTML = `
+          <div class="list-empty">
+            No active calls right now.
+          </div>
+        `;
+        return;
+      }
+
+      const sorted = [...callsData].sort((a, b) => {
+        return new Date(getCreatedAt(a)) - new Date(getCreatedAt(b));
+      });
+
+      elements.callsList.innerHTML = sorted.map((call) => {
+        const callId = getCallId(call);
+        const tableName = escapeHtml(getTableName(call));
+        const createdAt = getCreatedAt(call);
+        const createdFull = escapeHtml(formatDateTime(createdAt));
+        const createdShort = escapeHtml(formatClock(createdAt));
+        const waiting = escapeHtml(formatWaitingTime(createdAt));
+
+        return `
+          <div class="item ${isNewCall(call) ? "new-call" : ""}" data-call-id="${escapeHtml(callId)}" data-created-at="${escapeHtml(createdAt || "")}">
+            <div class="item-left">
+              <div class="item-title">${tableName}</div>
+              <div class="item-meta">Service request is active</div>
+            </div>
+
+            <div class="meta-block">
+              <div class="meta-label">Waiting time</div>
+              <div class="meta-value">
+                <span class="wait-pill" data-waiting-for="${escapeHtml(createdAt || "")}">${waiting}</span>
+              </div>
+            </div>
+
+            <div class="meta-block">
+              <div class="meta-label">Created</div>
+              <div class="meta-value">${createdShort}</div>
+              <div class="small-muted">${createdFull}</div>
+            </div>
+
+            <div class="inline-actions">
+              <button class="btn btn-primary" onclick="clearCall('${String(callId).replace(/'/g, "\\'")}')">Clear</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderTables() {
+      if (!Array.isArray(tablesData) || tablesData.length === 0) {
+        elements.tablesList.innerHTML = `
+          <div class="list-empty">No tables found yet.</div>
+        `;
+        return;
+      }
+
+      elements.tablesList.innerHTML = `
+        <table class="table-simple">
+          <thead>
+            <tr>
+              <th>Table</th>
+              <th>ID</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tablesData.map((table) => `
+              <tr>
+                <td class="table-name">${escapeHtml(table.name || "Unnamed table")}</td>
+                <td class="small-muted">${escapeHtml(table.id || "")}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderAssignTableOptions() {
+      const currentValue = elements.assignTableSelect.value;
+
+      const options = [
+        `<option value="">Select table</option>`,
+        ...tablesData.map((table) => `
+          <option value="${escapeHtml(table.id)}">${escapeHtml(table.name || "Unnamed table")}</option>
+        `)
+      ];
+
+      elements.assignTableSelect.innerHTML = options.join("");
+
+      if (tablesData.some((table) => table.id === currentValue)) {
+        elements.assignTableSelect.value = currentValue;
+      }
+    }
+
+    function renderButtons() {
+      if (!Array.isArray(buttonsData) || buttonsData.length === 0) {
+        elements.buttonsList.innerHTML = `
+          <div class="list-empty">No buttons found yet.</div>
+        `;
+        return;
+      }
+
+      elements.buttonsList.innerHTML = `
+        <table class="table-simple">
+          <thead>
+            <tr>
+              <th>Table</th>
+              <th>Button ID</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${buttonsData.map((button) => {
+              const buttonId = getButtonId(button);
+              const tableName = button.table_name || button.table?.name || button.tables?.name || "—";
+              const assigned = !!button.table_id;
+
+              return `
+                <tr>
+                  <td class="table-name">${escapeHtml(tableName)}</td>
+                  <td>${escapeHtml(buttonId || "—")}</td>
+                  <td>
+                    ${assigned
+                      ? `<span class="assign-pill">Assigned</span>`
+                      : `<span class="unassign-pill">Unassigned</span>`
+                    }
+                  </td>
+                  <td>
+                    ${assigned
+                      ? `<button class="btn btn-danger" onclick="unassignButton('${String(buttonId).replace(/'/g, "\\'")}')">Remove button</button>`
+                      : `<span class="small-muted">—</span>`
+                    }
+                  </td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function updateLiveWaitingTimes() {
+      document.querySelectorAll("[data-waiting-for]").forEach((el) => {
+        const createdAt = el.getAttribute("data-waiting-for");
+        el.textContent = formatWaitingTime(createdAt);
+      });
+
+      if (callsData.length > 0) {
+        const oldest = [...callsData].sort((a, b) => new Date(getCreatedAt(a)) - new Date(getCreatedAt(b)))[0];
+        elements.statLongestWait.textContent = formatWaitingTime(getCreatedAt(oldest));
+      }
+    }
+
+    async function loadCalls(showError = true) {
+      try {
+        const data = await apiFetch("/calls");
+        callsData = data.calls || [];
+        renderCalls();
+        updateLastUpdatedLabel();
+        setStatus(elements.callsStatus, callsData.length ? `${callsData.length} active call(s)` : "No active calls", "success");
+      } catch (error) {
+        if (showError) {
+          setStatus(elements.callsStatus, error.message || "Failed to load calls", "error");
+        }
+      }
+    }
+
+    async function loadTables(showError = true) {
+      try {
+        const data = await apiFetch("/tables");
+        tablesData = Array.isArray(data) ? data : [];
+        renderTables();
+        renderAssignTableOptions();
+        setStatus(elements.tablesStatus, `Loaded ${tablesData.length} table(s)`, "success");
+      } catch (error) {
+        if (showError) {
+          setStatus(elements.tablesStatus, error.message || "Failed to load tables", "error");
+        }
+      }
+    }
+
+    async function loadButtons(showError = true) {
+      try {
+        const data = await apiFetch("/tables-with-buttons");
+        buttonsData = Array.isArray(data) ? data : [];
+        renderButtons();
+        setStatus(elements.buttonsStatus, `Loaded ${buttonsData.length} button record(s)`, "success");
+      } catch (error) {
+        if (showError) {
+          setStatus(elements.buttonsStatus, error.message || "Failed to load buttons", "error");
+        }
+      }
+    }
+
+    async function createTable() {
+      const name = elements.tableNameInput.value.trim();
+
+      if (!name) {
+        setStatus(elements.tablesStatus, "Please enter a table name", "error");
+        return;
+      }
+
+      elements.createTableBtn.disabled = true;
+      setStatus(elements.tablesStatus, "Creating table...");
+
+      try {
+        await apiFetch("/tables", {
+          method: "POST",
+          body: JSON.stringify({ name })
+        });
+
+        elements.tableNameInput.value = "";
+        await loadTables(false);
+        await loadButtons(false);
+        setStatus(elements.tablesStatus, "Table created successfully", "success");
+      } catch (error) {
+        setStatus(elements.tablesStatus, error.message || "Failed to create table", "error");
+      } finally {
+        elements.createTableBtn.disabled = false;
+      }
+    }
+
+    async function assignButton() {
+      const buttonId = elements.buttonIdInput.value.trim();
+      const tableId = elements.assignTableSelect.value;
+
+      if (!buttonId) {
+        setStatus(elements.buttonsStatus, "Please enter a button ID", "error");
+        return;
+      }
+
+      if (!tableId) {
+        setStatus(elements.buttonsStatus, "Please select a table", "error");
+        return;
+      }
+
+      elements.assignButtonBtn.disabled = true;
+      setStatus(elements.buttonsStatus, "Assigning button...");
+
+      try {
+        await apiFetch("/buttons/assign", {
+          method: "POST",
+          body: JSON.stringify({ buttonId, tableId })
+        });
+
+        elements.buttonIdInput.value = "";
+        await loadButtons(false);
+        await loadTables(false);
+        setStatus(elements.buttonsStatus, "Button assigned successfully", "success");
+      } catch (error) {
+        setStatus(elements.buttonsStatus, error.message || "Failed to assign button", "error");
+      } finally {
+        elements.assignButtonBtn.disabled = false;
+      }
+    }
+
+    async function clearCall(callId) {
+      if (!callId) return;
+
+      try {
+        await apiFetch(`/calls/${callId}/clear`, {
+          method: "POST"
+        });
+
+        await loadCalls(false);
+      } catch (error) {
+        setStatus(elements.callsStatus, error.message || "Failed to clear call", "error");
+      }
+    }
+
+    async function unassignButton(buttonId) {
+      if (!buttonId) return;
+
+      try {
+        await apiFetch("/buttons/unassign", {
+          method: "POST",
+          body: JSON.stringify({ buttonId })
+        });
+
+        await loadButtons(false);
+        setStatus(elements.buttonsStatus, "Button removed successfully", "success");
+      } catch (error) {
+        setStatus(elements.buttonsStatus, error.message || "Failed to remove button", "error");
+      }
+    }
+
+    window.clearCall = clearCall;
+    window.unassignButton = unassignButton;
+
+    function showSection(sectionId) {
+      document.querySelectorAll(".section").forEach((section) => {
+        section.classList.toggle("active", section.id === sectionId);
+      });
+
+      document.querySelectorAll(".nav-button").forEach((button) => {
+        button.classList.toggle("active", button.dataset.section === sectionId);
+      });
+
+      elements.pageTitle.textContent = pageMeta[sectionId]?.title || "Cue Admin";
+      elements.pageSubtitle.textContent = pageMeta[sectionId]?.subtitle || "";
+    }
+
+    function startLiveRefresh() {
+      stopLiveRefresh();
+
+      callsRefreshInterval = setInterval(() => {
+        loadCalls(false);
+      }, DEFAULT_REFRESH_MS);
+
+      waitingClockInterval = setInterval(() => {
+        updateLiveWaitingTimes();
+      }, 1000);
+    }
+
+    function stopLiveRefresh() {
+      if (callsRefreshInterval) clearInterval(callsRefreshInterval);
+      if (waitingClockInterval) clearInterval(waitingClockInterval);
+    }
+
+    async function handleLogout() {
+      elements.logoutBtn.disabled = true;
+
+      try {
+        await supabaseClient.auth.signOut();
+      } catch (error) {
+        console.error("Logout error:", error);
+      } finally {
+        window.location.href = "/admin-login.html";
+      }
+    }
+
+    async function requireAuth() {
+      const { data, error } = await supabaseClient.auth.getSession();
+
+      if (error || !data?.session) {
+        window.location.href = "/admin-login.html";
+        return null;
+      }
+
+      const user = data.session.user;
+      elements.sessionEmail.textContent = user?.email || "Authenticated admin";
+      return user;
+    }
+
+    function bindEvents() {
+      document.querySelectorAll(".nav-button").forEach((button) => {
+        button.addEventListener("click", () => {
+          showSection(button.dataset.section);
+        });
+      });
+
+      elements.logoutBtn.addEventListener("click", handleLogout);
+
+      elements.refreshCallsBtn.addEventListener("click", () => loadCalls(true));
+      elements.refreshTablesBtn.addEventListener("click", async () => {
+        await loadTables(true);
+      });
+      elements.refreshButtonsBtn.addEventListener("click", async () => {
+        await loadButtons(true);
+      });
+
+      elements.createTableBtn.addEventListener("click", createTable);
+      elements.assignButtonBtn.addEventListener("click", assignButton);
+
+      elements.tableNameInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") createTable();
+      });
+
+      elements.buttonIdInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") assignButton();
+      });
+    }
+
+    async function init() {
+      const user = await requireAuth();
+      if (!user) return;
+
+      bindEvents();
+
+      await Promise.all([
+        loadCalls(true),
+        loadTables(true),
+        loadButtons(true)
+      ]);
+
+      startLiveRefresh();
+
+      supabaseClient.auth.onAuthStateChange((event, session) => {
+        if (event === "SIGNED_OUT" || !session) {
+          window.location.href = "/admin-login.html";
+        }
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>
