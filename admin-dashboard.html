@@ -958,12 +958,26 @@
     }
 
     function getMappingTableName(item) {
-      if (item?.restaurant_tables?.name) return item.restaurant_tables.name;
+      if (!item?.table_id) {
+        return "Unassigned";
+      }
+
+      if (item?.restaurant_tables?.name) {
+        return item.restaurant_tables.name;
+      }
+      
       if (Array.isArray(item?.restaurant_tables) && item.restaurant_tables[0]?.name) {
         return item.restaurant_tables[0].name;
       }
-      return item?.table_id ? `Table ID ${item.table_id}` : "Unassigned";
+      
+      const matchedTable = tablesCache.find((table) => table.id === item.table_id);
+      if (matchedTable?.name) {
+        return matchedTable.name;
+      }
+      
+      return `Table ID ${item.table_id}`;
     }
+
 
     function renderButtons() {
       kpiButtonCountEl.textContent = String(buttonsCache.length);
