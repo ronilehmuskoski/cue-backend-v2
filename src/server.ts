@@ -212,7 +212,6 @@ app.delete("/tables/:id", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "table id required" });
     }
 
-    // 1) Unassign all buttons from this table
     const { error: unassignButtonsError } = await supabase
       .from("buttons")
       .update({ table_id: null })
@@ -226,7 +225,6 @@ app.delete("/tables/:id", async (req: Request, res: Response) => {
       });
     }
 
-    // 2) Delete all calls for this table
     const { error: deleteCallsError } = await supabase
       .from("calls")
       .delete()
@@ -240,7 +238,6 @@ app.delete("/tables/:id", async (req: Request, res: Response) => {
       });
     }
 
-    // 3) Delete the table itself
     const { error: deleteTableError } = await supabase
       .from("restaurant_tables")
       .delete()
@@ -268,24 +265,40 @@ app.delete("/tables/:id", async (req: Request, res: Response) => {
 // TABLES WITH BUTTONS
 app.get("/tables-with-buttons", async (_req: Request, res: Response) => {
   try {
-    const { data, error } = await supabase
+    const { data: buttons, error: buttonsError } = await supabase
       .from("buttons")
-      .select(`
-        id,
-        table_id,
-        restaurant_tables (
-          id,
-          name
-        )
-      `)
-      .eq("restaurant_id", DEFAULT_RESTAURANT_ID);
+      .select("id, table_id, restaurant_id")
+      .eq("restaurant_id", DEFAULT_RESTAURANT_ID)
+      .order("id", { ascending: true });
 
-    if (error) {
-      console.error("GET /tables-with-buttons error:", error);
-      return res.status(500).json({ error: error.message });
+    if (buttonsError) {
+      console.error("GET /tables-with-buttons buttons error:", buttonsError);
+      return res.status(500).json({ error: buttonsError.message });
     }
 
-    return res.json(data || []);
+    const { data: tables, error: tablesError } = await supabase
+      .from("restaurant_tables")
+      .select("id, name")
+      .eq("restaurant_id", DEFAULT_RESTAURANT_ID);
+
+    if (tablesError) {
+      console.error("GET /tables-with-buttons tables error:", tablesError);
+      return res.status(500).json({ error: tablesError.message });
+    }
+
+    const tableMap = new Map<string, string>();
+    for (const table of tables || []) {
+      tableMap.set(table.id, table.name);
+    }
+
+    const result = (buttons || []).map((button) => ({
+      id: button.id,
+      table_id: button.table_id,
+      restaurant_id: button.restaurant_id,
+      table_name: button.table_id ? tableMap.get(button.table_id) || null : null,
+    }));
+
+    return res.json(result);
   } catch (err: any) {
     console.error("GET /tables-with-buttons catch error:", err);
     return res.status(500).json({ error: "Internal server error" });
@@ -305,10 +318,9 @@ app.post("/buttons/assign", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "missing fields" });
     }
 
-    // Optional validation: check that table exists
     const { data: table, error: tableError } = await supabase
       .from("restaurant_tables")
-      .select("id")
+      .select("id, name")
       .eq("id", tableId)
       .eq("restaurant_id", DEFAULT_RESTAURANT_ID)
       .single();
@@ -344,7 +356,10 @@ app.post("/buttons/assign", async (req: Request, res: Response) => {
         return res.status(500).json({ error: error.message });
       }
 
-      return res.json(data?.[0]);
+      return res.json({
+        ...(data?.[0] || {}),
+        table_name: table.name,
+      });
     }
 
     const { data, error } = await supabase
@@ -361,7 +376,10 @@ app.post("/buttons/assign", async (req: Request, res: Response) => {
       return res.status(500).json({ error: error.message });
     }
 
-    return res.json(data?.[0]);
+    return res.json({
+      ...(data?.[0] || {}),
+      table_name: table.name,
+    });
   } catch (err: any) {
     console.error("POST /buttons/assign catch error:", err);
     return res.status(500).json({ error: "Internal server error" });
