@@ -336,12 +336,6 @@
       background: rgba(196, 75, 75, 0.2);
     }
 
-    button.small {
-      padding: 10px 14px;
-      font-size: 14px;
-      border-radius: 14px;
-    }
-
     .message {
       margin-top: 14px;
       padding: 12px 14px;
@@ -491,6 +485,56 @@
       color: var(--muted);
       font-size: 13px;
       margin-top: 10px;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      margin-top: 14px;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 620px;
+    }
+
+    .data-table th {
+      text-align: left;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .data-table td {
+      padding: 16px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      vertical-align: middle;
+      font-size: 15px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .status-badge.assigned {
+      background: rgba(57, 195, 125, 0.12);
+      color: #cffff0;
+      border: 1px solid rgba(57, 195, 125, 0.25);
+    }
+
+    .status-badge.unassigned {
+      background: rgba(255,255,255,0.05);
+      color: #d5d0cb;
+      border: 1px solid rgba(255,255,255,0.08);
     }
 
     @media (max-width: 1180px) {
@@ -690,7 +734,7 @@
             <button class="secondary" id="refresh-buttons-btn">Refresh</button>
           </div>
 
-          <div id="buttons-list" class="list"></div>
+          <div id="buttons-list" class="table-wrap"></div>
         </div>
       </div>
     </section>
@@ -746,18 +790,6 @@
       const el = document.getElementById(elementId);
       el.textContent = "";
       el.className = "message";
-    }
-
-    function formatTime(value) {
-      try {
-        return new Date(value).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit"
-        });
-      } catch {
-        return value || "-";
-      }
     }
 
     function formatDateTime(value) {
@@ -882,6 +914,27 @@
       return "Unknown table";
     }
 
+    function getMappingTableName(item) {
+      if (!item?.table_id) {
+        return "—";
+      }
+
+      const matchedTable = tablesCache.find((table) => table.id === item.table_id);
+      if (matchedTable?.name) {
+        return matchedTable.name;
+      }
+
+      if (item?.restaurant_tables?.name) {
+        return item.restaurant_tables.name;
+      }
+
+      if (Array.isArray(item?.restaurant_tables) && item.restaurant_tables[0]?.name) {
+        return item.restaurant_tables[0].name;
+      }
+
+      return "—";
+    }
+
     function renderCalls(newCallIds = []) {
       callsBadgeEl.textContent = String(callsCache.length);
       kpiActiveCallsEl.textContent = String(callsCache.length);
@@ -957,64 +1010,55 @@
       }).join("");
     }
 
-    function getMappingTableName(item) {
-      if (!item?.table_id) {
-        return "Unassigned";
-      }
-
-      if (item?.restaurant_tables?.name) {
-        return item.restaurant_tables.name;
-      }
-      
-      if (Array.isArray(item?.restaurant_tables) && item.restaurant_tables[0]?.name) {
-        return item.restaurant_tables[0].name;
-      }
-      
-      const matchedTable = tablesCache.find((table) => table.id === item.table_id);
-      if (matchedTable?.name) {
-        return matchedTable.name;
-      }
-      
-      return `Table ID ${item.table_id}`;
-    }
-
-
     function renderButtons() {
       kpiButtonCountEl.textContent = String(buttonsCache.length);
-      
+
       if (!buttonsCache.length) {
         buttonsListEl.innerHTML = `
-        <div class="empty">
-          No button mappings yet.
-        </div>
+          <div class="empty">
+            No button mappings yet.
+          </div>
         `;
         return;
       }
-      
-      buttonsListEl.innerHTML = buttonsCache.map((item) => {
-        const tableName = getMappingTableName(item);
-        const status = item.table_id ? "Assigned" : "Unassigned";
-        
-        return `
-          <div class="row-card">
-            <div class="row-main">
-              <div class="row-title">${escapeHtml(tableName)}</div>
-              <div class="row-meta">
-                Button ID: ${escapeHtml(item.id)}
-              </div>
-            </div>
-            
-            <div class="row-actions">
-              <div class="row-meta" style="margin-right: 8px;">${escapeHtml(status)}</div>
-              ${
-                item.table_id
-                  ? `<button class="danger" onclick="unassignButton('${item.id}')">Remove button</button>`
-                  : `<span class="muted-note">—</span>`
-              }
-            </div>
-          </div>
-        `;
-      }).join("");
+
+      buttonsListEl.innerHTML = `
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>TABLE</th>
+              <th>BUTTON ID</th>
+              <th>STATUS</th>
+              <th>ACTION</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${buttonsCache.map((item) => {
+              const tableName = getMappingTableName(item);
+              const isAssigned = Boolean(item.table_id);
+
+              return `
+                <tr>
+                  <td>${escapeHtml(tableName)}</td>
+                  <td>${escapeHtml(item.id)}</td>
+                  <td>
+                    <span class="status-badge ${isAssigned ? "assigned" : "unassigned"}">
+                      ${isAssigned ? "Assigned" : "Unassigned"}
+                    </span>
+                  </td>
+                  <td>
+                    ${
+                      isAssigned
+                        ? `<button class="danger" onclick="unassignButton('${item.id}')">Remove button</button>`
+                        : `—`
+                    }
+                  </td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+      `;
     }
 
     async function loadCalls() {
@@ -1058,11 +1102,9 @@
 
     async function loadAll() {
       try {
-        await Promise.all([
-          loadCalls(),
-          loadTables(),
-          loadButtons()
-        ]);
+        await loadCalls();
+        await loadTables();
+        await loadButtons();
       } catch (err) {
         console.error("loadAll error", err);
       }
@@ -1088,6 +1130,7 @@
         input.value = "";
         setMessage("tables-message", "Table created successfully.", "success");
         await loadTables();
+        await loadButtons();
       } catch (err) {
         setMessage("tables-message", err.message || "Failed to create table.", "error");
       }
@@ -1131,6 +1174,8 @@
         document.getElementById("button-id-input").value = "";
         document.getElementById("button-table-select").value = "";
         setMessage("buttons-message", "Button assigned successfully.", "success");
+
+        await loadTables();
         await loadButtons();
       } catch (err) {
         setMessage("buttons-message", err.message || "Failed to assign button.", "error");
@@ -1150,6 +1195,8 @@
         });
 
         setMessage("buttons-message", "Button unassigned successfully.", "success");
+
+        await loadTables();
         await loadButtons();
       } catch (err) {
         setMessage("buttons-message", err.message || "Failed to unassign button.", "error");
@@ -1214,8 +1261,14 @@
       document.getElementById("create-table-btn").addEventListener("click", createTable);
       document.getElementById("assign-button-btn").addEventListener("click", assignButton);
       document.getElementById("refresh-calls-btn").addEventListener("click", loadCalls);
-      document.getElementById("refresh-tables-btn").addEventListener("click", loadTables);
-      document.getElementById("refresh-buttons-btn").addEventListener("click", loadButtons);
+      document.getElementById("refresh-tables-btn").addEventListener("click", async () => {
+        await loadTables();
+        await loadButtons();
+      });
+      document.getElementById("refresh-buttons-btn").addEventListener("click", async () => {
+        await loadTables();
+        await loadButtons();
+      });
 
       document.getElementById("new-table-name").addEventListener("keydown", (e) => {
         if (e.key === "Enter") createTable();
