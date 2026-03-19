@@ -24,12 +24,10 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const DEFAULT_RESTAURANT_ID = "35c39532-212e-43c1-92f7-068bbd8fd060";
 
-
 // HEALTH
 app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok" });
 });
-
 
 // GET CALLS
 app.get("/calls", async (_req: Request, res: Response) => {
@@ -49,37 +47,47 @@ app.get("/calls", async (_req: Request, res: Response) => {
       .eq("status", "ACTIVE")
       .order("created_at", { ascending: false });
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error("GET /calls error:", error);
+      return res.status(500).json({ error: error.message });
+    }
 
-    res.json({ calls: data || [] });
-  } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
+    return res.json({ calls: data || [] });
+  } catch (err: any) {
+    console.error("GET /calls catch error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 // CLEAR CALL
 app.post("/calls/:id/clear", async (req: Request, res: Response) => {
   try {
     const callId = req.params.id;
 
+    if (!callId) {
+      return res.status(400).json({ error: "call id required" });
+    }
+
     const { data, error } = await supabase
       .from("calls")
       .update({
         status: "CLEARED",
-        cleared_at: new Date().toISOString()
+        cleared_at: new Date().toISOString(),
       })
       .eq("id", callId)
       .select();
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error("POST /calls/:id/clear error:", error);
+      return res.status(500).json({ error: error.message });
+    }
 
-    res.json(data?.[0]);
-  } catch {
-    res.status(500).json({ error: "Internal server error" });
+    return res.json(data?.[0] || { message: "Call cleared" });
+  } catch (err: any) {
+    console.error("POST /calls/:id/clear catch error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 // FLIC WEBHOOK
 app.post("/flic", async (req: Request, res: Response) => {
@@ -93,22 +101,31 @@ app.post("/flic", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "buttonId missing" });
     }
 
-    const { data: button } = await supabase
+    const { data: button, error: buttonError } = await supabase
       .from("buttons")
       .select("*")
       .eq("id", buttonId)
       .single();
 
+    if (buttonError) {
+      console.error("POST /flic button lookup error:", buttonError);
+    }
+
     if (!button || !button.table_id) {
       return res.status(400).json({ error: "Button not assigned" });
     }
 
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from("calls")
       .select("id")
       .eq("table_id", button.table_id)
       .eq("status", "ACTIVE")
       .limit(1);
+
+    if (existingError) {
+      console.error("POST /flic existing call lookup error:", existingError);
+      return res.status(500).json({ error: existingError.message });
+    }
 
     if (existing && existing.length > 0) {
       return res.json({ message: "Call already active" });
@@ -119,18 +136,21 @@ app.post("/flic", async (req: Request, res: Response) => {
       .insert({
         restaurant_id: button.restaurant_id,
         table_id: button.table_id,
-        status: "ACTIVE"
+        status: "ACTIVE",
       })
       .select();
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error("POST /flic insert call error:", error);
+      return res.status(500).json({ error: error.message });
+    }
 
-    res.status(201).json(data?.[0]);
-  } catch {
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(201).json(data?.[0]);
+  } catch (err: any) {
+    console.error("POST /flic catch error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 // GET TABLES
 app.get("/tables", async (_req: Request, res: Response) => {
@@ -141,40 +161,49 @@ app.get("/tables", async (_req: Request, res: Response) => {
       .eq("restaurant_id", DEFAULT_RESTAURANT_ID)
       .order("created_at", { ascending: true });
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error("GET /tables error:", error);
+      return res.status(500).json({ error: error.message });
+    }
 
-    res.json(data || []);
-  } catch {
-    res.status(500).json({ error: "Internal server error" });
+    return res.json(data || []);
+  } catch (err: any) {
+    console.error("GET /tables catch error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 // CREATE TABLE
 app.post("/tables", async (req: Request, res: Response) => {
   try {
-    const { name } = req.body;
+    const rawName = req.body?.name;
+    const name = typeof rawName === "string" ? rawName.trim() : "";
 
-    if (!name) return res.status(400).json({ error: "name required" });
+    if (!name) {
+      return res.status(400).json({ error: "name required" });
+    }
 
     const { data, error } = await supabase
       .from("restaurant_tables")
       .insert({
         name,
-        restaurant_id: DEFAULT_RESTAURANT_ID
+        restaurant_id: DEFAULT_RESTAURANT_ID,
       })
       .select();
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error("POST /tables error:", error);
+      return res.status(500).json({ error: error.message });
+    }
 
-    res.json(data?.[0]);
-  } catch {
-    res.status(500).json({ error: "Internal server error" });
+    return res.json(data?.[0]);
+  } catch (err: any) {
+    console.error("POST /tables catch error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
-
-// DELETE TABLE 🚀
+// DELETE TABLE
 app.delete("/tables/:id", async (req: Request, res: Response) => {
   try {
     const tableId = req.params.id;
@@ -183,51 +212,63 @@ app.delete("/tables/:id", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "table id required" });
     }
 
-    // estä jos button kiinni
-    const { data: buttons } = await supabase
+    // 1) Unassign all buttons from this table
+    const { error: unassignButtonsError } = await supabase
       .from("buttons")
-      .select("id")
-      .eq("table_id", tableId)
-      .limit(1);
+      .update({ table_id: null })
+      .eq("table_id", tableId);
 
-    if (buttons && buttons.length > 0) {
-      return res.status(400).json({
-        error: "Table has button assigned"
+    if (unassignButtonsError) {
+      console.error("DELETE /tables/:id unassign buttons error:", unassignButtonsError);
+      return res.status(500).json({
+        error: "Failed to unassign buttons",
+        details: unassignButtonsError.message,
       });
     }
 
-    // estä jos active call
-    const { data: calls } = await supabase
+    // 2) Delete all calls for this table
+    const { error: deleteCallsError } = await supabase
       .from("calls")
-      .select("id")
-      .eq("table_id", tableId)
-      .eq("status", "ACTIVE")
-      .limit(1);
+      .delete()
+      .eq("table_id", tableId);
 
-    if (calls && calls.length > 0) {
-      return res.status(400).json({
-        error: "Table has active call"
+    if (deleteCallsError) {
+      console.error("DELETE /tables/:id delete calls error:", deleteCallsError);
+      return res.status(500).json({
+        error: "Failed to delete calls for table",
+        details: deleteCallsError.message,
       });
     }
 
-    const { error } = await supabase
+    // 3) Delete the table itself
+    const { error: deleteTableError } = await supabase
       .from("restaurant_tables")
       .delete()
       .eq("id", tableId);
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (deleteTableError) {
+      console.error("DELETE /tables/:id delete table error:", deleteTableError);
+      return res.status(500).json({
+        error: "Failed to delete table",
+        details: deleteTableError.message,
+      });
+    }
 
-    res.json({ message: "Table deleted" });
-  } catch {
-    res.status(500).json({ error: "Internal server error" });
+    return res.json({
+      success: true,
+      message: "Table deleted",
+      deletedTableId: tableId,
+    });
+  } catch (err: any) {
+    console.error("DELETE /tables/:id catch error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 // TABLES WITH BUTTONS
 app.get("/tables-with-buttons", async (_req: Request, res: Response) => {
   try {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("buttons")
       .select(`
         id,
@@ -239,36 +280,69 @@ app.get("/tables-with-buttons", async (_req: Request, res: Response) => {
       `)
       .eq("restaurant_id", DEFAULT_RESTAURANT_ID);
 
-    res.json(data || []);
-  } catch {
-    res.status(500).json({ error: "Internal server error" });
+    if (error) {
+      console.error("GET /tables-with-buttons error:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    return res.json(data || []);
+  } catch (err: any) {
+    console.error("GET /tables-with-buttons catch error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 // ASSIGN BUTTON
 app.post("/buttons/assign", async (req: Request, res: Response) => {
   try {
-    const { buttonId, tableId } = req.body;
+    const rawButtonId = req.body?.buttonId;
+    const rawTableId = req.body?.tableId;
+
+    const buttonId = typeof rawButtonId === "string" ? rawButtonId.trim() : "";
+    const tableId = typeof rawTableId === "string" ? rawTableId.trim() : "";
 
     if (!buttonId || !tableId) {
       return res.status(400).json({ error: "missing fields" });
     }
 
-    const { data: existing } = await supabase
+    // Optional validation: check that table exists
+    const { data: table, error: tableError } = await supabase
+      .from("restaurant_tables")
+      .select("id")
+      .eq("id", tableId)
+      .eq("restaurant_id", DEFAULT_RESTAURANT_ID)
+      .single();
+
+    if (tableError || !table) {
+      console.error("POST /buttons/assign table lookup error:", tableError);
+      return res.status(400).json({ error: "table not found" });
+    }
+
+    const { data: existing, error: existingError } = await supabase
       .from("buttons")
       .select("*")
       .eq("id", buttonId)
       .single();
 
+    if (existingError && existingError.code !== "PGRST116") {
+      console.error("POST /buttons/assign existing button lookup error:", existingError);
+      return res.status(500).json({ error: existingError.message });
+    }
+
     if (existing) {
       const { data, error } = await supabase
         .from("buttons")
-        .update({ table_id: tableId })
+        .update({
+          table_id: tableId,
+          restaurant_id: DEFAULT_RESTAURANT_ID,
+        })
         .eq("id", buttonId)
         .select();
 
-      if (error) return res.status(500).json({ error: error.message });
+      if (error) {
+        console.error("POST /buttons/assign update error:", error);
+        return res.status(500).json({ error: error.message });
+      }
 
       return res.json(data?.[0]);
     }
@@ -278,23 +352,31 @@ app.post("/buttons/assign", async (req: Request, res: Response) => {
       .insert({
         id: buttonId,
         table_id: tableId,
-        restaurant_id: DEFAULT_RESTAURANT_ID
+        restaurant_id: DEFAULT_RESTAURANT_ID,
       })
       .select();
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error("POST /buttons/assign insert error:", error);
+      return res.status(500).json({ error: error.message });
+    }
 
-    res.json(data?.[0]);
-  } catch {
-    res.status(500).json({ error: "Internal server error" });
+    return res.json(data?.[0]);
+  } catch (err: any) {
+    console.error("POST /buttons/assign catch error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 // UNASSIGN BUTTON
 app.post("/buttons/unassign", async (req: Request, res: Response) => {
   try {
-    const { buttonId } = req.body;
+    const rawButtonId = req.body?.buttonId;
+    const buttonId = typeof rawButtonId === "string" ? rawButtonId.trim() : "";
+
+    if (!buttonId) {
+      return res.status(400).json({ error: "buttonId required" });
+    }
 
     const { data, error } = await supabase
       .from("buttons")
@@ -302,14 +384,17 @@ app.post("/buttons/unassign", async (req: Request, res: Response) => {
       .eq("id", buttonId)
       .select();
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error("POST /buttons/unassign error:", error);
+      return res.status(500).json({ error: error.message });
+    }
 
-    res.json(data?.[0]);
-  } catch {
-    res.status(500).json({ error: "Internal server error" });
+    return res.json(data?.[0] || { message: "Button unassigned" });
+  } catch (err: any) {
+    console.error("POST /buttons/unassign catch error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 const PORT = Number(process.env.PORT) || 3000;
 
