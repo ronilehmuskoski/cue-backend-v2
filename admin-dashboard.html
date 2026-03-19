@@ -981,30 +981,36 @@
 
     function renderButtons() {
       kpiButtonCountEl.textContent = String(buttonsCache.length);
-
+      
       if (!buttonsCache.length) {
         buttonsListEl.innerHTML = `
-          <div class="empty">
-            No button mappings yet.
-          </div>
+        <div class="empty">
+          No button mappings yet.
+        </div>
         `;
         return;
       }
-
+      
       buttonsListEl.innerHTML = buttonsCache.map((item) => {
-        const tableName = escapeHtml(getMappingTableName(item));
-
+        const tableName = getMappingTableName(item);
+        const status = item.table_id ? "Assigned" : "Unassigned";
+        
         return `
           <div class="row-card">
             <div class="row-main">
-              <div class="row-title">${escapeHtml(item.id)}</div>
+              <div class="row-title">${escapeHtml(tableName)}</div>
               <div class="row-meta">
-                Assigned to: ${tableName}
+                Button ID: ${escapeHtml(item.id)}
               </div>
             </div>
-
+            
             <div class="row-actions">
-              <button class="secondary" onclick="unassignButton('${item.id}')">Unassign</button>
+              <div class="row-meta" style="margin-right: 8px;">${escapeHtml(status)}</div>
+              ${
+                item.table_id
+                  ? `<button class="danger" onclick="unassignButton('${item.id}')">Remove button</button>`
+                  : `<span class="muted-note">—</span>`
+              }
             </div>
           </div>
         `;
