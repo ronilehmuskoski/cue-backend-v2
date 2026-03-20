@@ -5,1297 +5,582 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cue Admin Dashboard</title>
   <style>
-    :root {
-      --bg: #050505;
-      --panel: #0d0d12;
-      --panel-2: #12121a;
-      --border: rgba(255, 215, 120, 0.14);
-      --gold: #e0b84f;
-      --gold-2: #f0d38a;
-      --text: #f7f3ea;
-      --muted: #a7a09a;
-      --danger: #c44b4b;
-      --danger-bg: rgba(196, 75, 75, 0.12);
-      --success: #39c37d;
-      --success-bg: rgba(57, 195, 125, 0.12);
-      --card-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
-      --radius: 22px;
-    }
-
     * {
       box-sizing: border-box;
     }
 
-    html, body {
+    body {
       margin: 0;
-      padding: 0;
+      font-family: Arial, sans-serif;
       background:
-        radial-gradient(circle at top left, rgba(224, 184, 79, 0.12), transparent 28%),
-        radial-gradient(circle at top right, rgba(224, 184, 79, 0.08), transparent 22%),
-        linear-gradient(180deg, #060606 0%, #050505 100%);
-      color: var(--text);
-      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      min-height: 100%;
+        radial-gradient(circle at top, rgba(212,175,55,0.10), transparent 35%),
+        linear-gradient(180deg, #0d0c0f 0%, #090909 100%);
+      color: #f5e7c1;
     }
 
-    body {
-      display: flex;
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
       min-height: 100vh;
     }
 
     .sidebar {
-      width: 300px;
-      border-right: 1px solid rgba(255,255,255,0.08);
-      padding: 30px 22px 20px;
-      display: flex;
-      flex-direction: column;
-      background:
-        linear-gradient(180deg, rgba(224, 184, 79, 0.06), transparent 24%),
-        rgba(5, 5, 5, 0.75);
-      backdrop-filter: blur(10px);
+      border-right: 1px solid rgba(212,175,55,0.18);
+      padding: 28px 22px;
+      background: rgba(8,8,10,0.92);
     }
 
     .brand {
-      margin-bottom: 26px;
-    }
-
-    .brand-logo {
-      font-size: 30px;
+      font-size: 34px;
       font-weight: 800;
-      letter-spacing: 0.18em;
-      color: var(--gold-2);
+      letter-spacing: 3px;
+      color: #e0be62;
       margin-bottom: 6px;
     }
 
-    .brand-subtitle {
-      color: var(--muted);
-      line-height: 1.45;
+    .sub {
+      color: #bda87a;
       font-size: 15px;
+      line-height: 1.5;
+      margin-bottom: 28px;
     }
 
     .nav {
-      margin-top: 18px;
-      border-top: 1px solid rgba(255,255,255,0.08);
-      padding-top: 20px;
       display: flex;
       flex-direction: column;
       gap: 12px;
+      margin-bottom: 32px;
     }
 
-    .nav-btn {
+    .nav a {
+      color: #f1e2b9;
+      text-decoration: none;
+      padding: 14px 16px;
+      border: 1px solid rgba(212,175,55,0.18);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.02);
+    }
+
+    .nav a:hover {
+      border-color: rgba(212,175,55,0.45);
+    }
+
+    .tv-button {
       width: 100%;
-      border: 1px solid transparent;
-      background: transparent;
-      color: var(--text);
-      font-size: 17px;
-      text-align: left;
-      padding: 16px 18px;
-      border-radius: 18px;
-      cursor: pointer;
-      transition: 0.2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .nav-btn:hover {
-      background: rgba(255,255,255,0.04);
-      border-color: rgba(255,255,255,0.08);
-    }
-
-    .nav-btn.active {
-      background: linear-gradient(135deg, rgba(224, 184, 79, 0.16), rgba(224, 184, 79, 0.05));
-      border-color: rgba(224, 184, 79, 0.35);
-      box-shadow: inset 0 0 0 1px rgba(224,184,79,0.08);
-    }
-
-    .nav-badge {
-      min-width: 30px;
-      height: 30px;
-      border-radius: 999px;
-      background: linear-gradient(135deg, #f1ca62, #d9a82a);
-      color: #201400;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      padding: 14px 16px;
+      background: #d7ad49;
+      color: #111;
+      border: none;
+      border-radius: 14px;
       font-weight: 800;
-      font-size: 14px;
-      padding: 0 8px;
-    }
-
-    .sidebar-footer {
-      margin-top: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      padding-top: 24px;
-      border-top: 1px solid rgba(255,255,255,0.08);
-    }
-
-    .account-box {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 18px;
-      padding: 16px;
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    .account-box strong {
-      color: var(--text);
-      display: block;
-      margin-bottom: 4px;
-    }
-
-    .logout-btn {
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.04);
-      color: var(--text);
-      border-radius: 16px;
-      padding: 15px 18px;
-      font-size: 16px;
       cursor: pointer;
+      font-size: 15px;
     }
 
-    .logout-btn:hover {
-      background: rgba(255,255,255,0.07);
+    .tv-button:hover {
+      opacity: 0.95;
     }
 
     .main {
-      flex: 1;
-      padding: 28px;
+      padding: 30px 28px 60px;
     }
 
     .topbar {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      gap: 20px;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
       margin-bottom: 24px;
     }
 
-    .title h1 {
+    .page-title {
+      font-size: 40px;
+      font-weight: 800;
+      color: #fff3d2;
       margin: 0;
-      font-size: 50px;
-      line-height: 1;
-      letter-spacing: -0.03em;
     }
 
-    .title p {
-      margin: 10px 0 0;
-      color: var(--muted);
-      font-size: 18px;
-    }
-
-    .status-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 16px;
+    .live-pill {
+      padding: 10px 14px;
       border-radius: 999px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.08);
-      color: var(--text);
+      border: 1px solid rgba(74, 255, 149, 0.25);
+      background: rgba(74, 255, 149, 0.08);
+      color: #83f6ac;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .section {
+      background: linear-gradient(180deg, rgba(20,20,24,0.95), rgba(15,15,18,0.95));
+      border: 1px solid rgba(212,175,55,0.18);
+      border-radius: 24px;
+      padding: 22px;
+      margin-bottom: 22px;
+      box-shadow: 0 14px 50px rgba(0,0,0,0.26);
+    }
+
+    .section-title {
+      margin: 0 0 8px;
+      font-size: 29px;
+      color: #fff1ca;
+    }
+
+    .section-sub {
+      margin: 0 0 20px;
+      color: #bba882;
       font-size: 15px;
     }
 
-    .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      background: var(--success);
-      box-shadow: 0 0 12px rgba(57, 195, 125, 0.8);
-    }
-
-    .content-section {
-      display: none;
-    }
-
-    .content-section.active {
-      display: block;
-    }
-
-    .grid {
+    .stats {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 22px;
     }
 
-    .panel {
-      background:
-        linear-gradient(180deg, rgba(224,184,79,0.05), transparent 28%),
-        linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.01)),
-        var(--panel);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--card-shadow);
-      padding: 20px;
+    .stat-card {
+      border: 1px solid rgba(212,175,55,0.16);
+      border-radius: 20px;
+      padding: 18px 20px;
+      background: rgba(255,255,255,0.02);
     }
 
-    .panel h2 {
-      margin: 0;
-      font-size: 21px;
-      line-height: 1.1;
-    }
-
-    .panel-subtitle {
-      margin: 8px 0 18px;
-      color: var(--muted);
-      font-size: 15px;
-    }
-
-    .panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
+    .stat-label {
+      font-size: 14px;
+      color: #c3b188;
       margin-bottom: 10px;
     }
 
-    .panel-header-left {
-      min-width: 0;
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: #e7c665;
+    }
+
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .call-card,
+    .area-card,
+    .table-card {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(212,175,55,0.18);
+      background: rgba(255,255,255,0.02);
+      flex-wrap: wrap;
+    }
+
+    .call-main,
+    .area-main,
+    .table-main {
+      flex: 1;
+      min-width: 240px;
+    }
+
+    .call-title,
+    .area-title,
+    .table-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff0c6;
+      margin-bottom: 6px;
+    }
+
+    .meta {
+      color: #beaa80;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .accent {
+      color: #f1bf52;
+      font-weight: 700;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 15px;
+    }
+
+    .btn-gold {
+      background: #ddb455;
+      color: #17130b;
+    }
+
+    .btn-dark {
+      background: #1c1a1e;
+      color: #f5e8c4;
+      border: 1px solid rgba(212,175,55,0.18);
+    }
+
+    .btn-danger {
+      background: #6e2d2d;
+      color: white;
     }
 
     .form-row {
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
+      margin-bottom: 16px;
     }
 
-    input, select {
-      flex: 1;
-      min-width: 0;
-      background: #07070b;
-      border: 1px solid rgba(255,255,255,0.1);
-      color: var(--text);
-      border-radius: 16px;
-      padding: 16px 16px;
-      font-size: 16px;
-      outline: none;
-    }
-
-    input:focus, select:focus {
-      border-color: rgba(224, 184, 79, 0.5);
-      box-shadow: 0 0 0 4px rgba(224,184,79,0.08);
-    }
-
-    button.primary {
-      border: none;
-      background: linear-gradient(135deg, #f1ca62, #d6a125);
-      color: #1f1500;
-      font-weight: 800;
-      padding: 15px 20px;
-      border-radius: 16px;
-      cursor: pointer;
-      font-size: 16px;
-      white-space: nowrap;
-    }
-
-    button.primary:hover {
-      filter: brightness(1.03);
-    }
-
-    button.secondary {
-      border: 1px solid rgba(255,255,255,0.1);
-      background: rgba(255,255,255,0.04);
-      color: var(--text);
-      font-weight: 700;
-      padding: 14px 18px;
-      border-radius: 16px;
-      cursor: pointer;
-      font-size: 15px;
-      white-space: nowrap;
-    }
-
-    button.secondary:hover {
-      background: rgba(255,255,255,0.07);
-    }
-
-    button.danger {
-      border: 1px solid rgba(196, 75, 75, 0.45);
-      background: var(--danger-bg);
-      color: #ffd7d7;
-      font-weight: 700;
-      padding: 12px 16px;
-      border-radius: 15px;
-      cursor: pointer;
-      font-size: 15px;
-      white-space: nowrap;
-    }
-
-    button.danger:hover {
-      background: rgba(196, 75, 75, 0.2);
-    }
-
-    .message {
-      margin-top: 14px;
+    input,
+    select {
+      border-radius: 12px;
+      border: 1px solid rgba(212,175,55,0.18);
+      background: #121216;
+      color: #f4e6bf;
       padding: 12px 14px;
-      border-radius: 14px;
-      font-size: 14px;
-      display: none;
+      font-size: 15px;
+      min-height: 46px;
     }
 
-    .message.show {
-      display: block;
+    input {
+      min-width: 240px;
+      flex: 1;
     }
 
-    .message.error {
-      background: rgba(196, 75, 75, 0.12);
-      border: 1px solid rgba(196, 75, 75, 0.28);
-      color: #ffcece;
-    }
-
-    .message.success {
-      background: rgba(57, 195, 125, 0.12);
-      border: 1px solid rgba(57, 195, 125, 0.28);
-      color: #cffff0;
-    }
-
-    .list {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      margin-top: 14px;
+    select {
+      min-width: 220px;
     }
 
     .empty {
-      color: var(--muted);
-      background: rgba(255,255,255,0.02);
-      border: 1px dashed rgba(255,255,255,0.1);
+      padding: 22px;
       border-radius: 16px;
-      padding: 18px;
-      text-align: center;
-    }
-
-    .row-card {
-      border-radius: 20px;
-      padding: 18px;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.025);
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: center;
-      transition: transform 0.15s ease, border-color 0.2s ease, background 0.2s ease;
-    }
-
-    .row-card:hover {
-      transform: translateY(-1px);
-      border-color: rgba(255,255,255,0.12);
-    }
-
-    .row-card.new-call {
-      border-color: rgba(224, 184, 79, 0.55);
-      background:
-        linear-gradient(135deg, rgba(224, 184, 79, 0.16), rgba(224, 184, 79, 0.04)),
-        rgba(255,255,255,0.03);
-      box-shadow: 0 0 0 1px rgba(224,184,79,0.15), 0 0 30px rgba(224,184,79,0.12);
-    }
-
-    .row-main {
-      min-width: 0;
-    }
-
-    .row-title {
-      font-size: 22px;
-      font-weight: 800;
-      margin: 0 0 6px;
-      letter-spacing: -0.02em;
-    }
-
-    .row-meta {
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.5;
-      word-break: break-word;
-    }
-
-    .row-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .call-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 10px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: rgba(196, 75, 75, 0.12);
-      color: #ffd7d7;
-      border: 1px solid rgba(196, 75, 75, 0.25);
-      font-size: 13px;
-      font-weight: 700;
-    }
-
-    .call-status .mini-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: #ff7070;
-      box-shadow: 0 0 10px rgba(255,112,112,0.8);
-    }
-
-    .table-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
-    }
-
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 14px;
-      margin-bottom: 18px;
-    }
-
-    .kpi {
-      border-radius: 18px;
-      padding: 18px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-
-    .kpi-label {
-      color: var(--muted);
-      font-size: 14px;
-      margin-bottom: 8px;
-    }
-
-    .kpi-value {
-      font-size: 30px;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-    }
-
-    .muted-note {
-      color: var(--muted);
-      font-size: 13px;
-      margin-top: 10px;
-    }
-
-    .table-wrap {
-      width: 100%;
-      overflow-x: auto;
-      margin-top: 14px;
-    }
-
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 620px;
-    }
-
-    .data-table th {
-      text-align: left;
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      padding: 12px 14px;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-    }
-
-    .data-table td {
-      padding: 16px 14px;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      vertical-align: middle;
-      font-size: 15px;
-    }
-
-    .status-badge {
-      display: inline-block;
-      padding: 8px 12px;
-      border-radius: 999px;
-      font-size: 13px;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-
-    .status-badge.assigned {
-      background: rgba(57, 195, 125, 0.12);
-      color: #cffff0;
-      border: 1px solid rgba(57, 195, 125, 0.25);
-    }
-
-    .status-badge.unassigned {
-      background: rgba(255,255,255,0.05);
-      color: #d5d0cb;
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-
-    @media (max-width: 1180px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
+      border: 1px dashed rgba(212,175,55,0.2);
+      color: #bca67c;
+      background: rgba(255,255,255,0.02);
     }
 
     @media (max-width: 980px) {
-      body {
-        flex-direction: column;
+      .layout {
+        grid-template-columns: 1fr;
       }
 
       .sidebar {
-        width: 100%;
         border-right: none;
-        border-bottom: 1px solid rgba(255,255,255,0.08);
-      }
-
-      .main {
-        padding: 20px;
-      }
-
-      .topbar {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .status-row {
-        justify-content: flex-start;
-      }
-
-      .kpi-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 640px) {
-      .title h1 {
-        font-size: 36px;
-      }
-
-      .row-card {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .row-actions {
-        justify-content: flex-start;
-      }
-
-      .form-row {
-        flex-direction: column;
-      }
-
-      input, select, button.primary, button.secondary {
-        width: 100%;
+        border-bottom: 1px solid rgba(212,175,55,0.18);
       }
     }
   </style>
 </head>
 <body>
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="brand-logo">CUE</div>
-      <div class="brand-subtitle">Premium restaurant service dashboard</div>
-    </div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">CUE</div>
+      <div class="sub">Premium restaurant service dashboard</div>
 
-    <nav class="nav">
-      <button class="nav-btn active" data-target="calls-section">
-        <span>Calls</span>
-        <span class="nav-badge" id="calls-badge">0</span>
-      </button>
-
-      <button class="nav-btn" data-target="tables-section">
-        <span>Tables</span>
-      </button>
-
-      <button class="nav-btn" data-target="buttons-section">
-        <span>Buttons</span>
-      </button>
-    </nav>
-
-    <div class="sidebar-footer">
-      <div class="account-box">
-        <strong>Logged in</strong>
-        <span id="logged-in-email">admin@cue.local</span>
+      <div class="nav">
+        <a href="#active-calls">Calls</a>
+        <a href="#coverage-areas">Coverage Areas</a>
+        <a href="#tables">Tables</a>
       </div>
 
-      <button class="logout-btn" id="logout-btn">Log out</button>
-    </div>
-  </aside>
+      <button class="tv-button" onclick="openTVScreen()">Open TV Call Screen</button>
+    </aside>
 
-  <main class="main">
-    <div class="topbar">
-      <div class="title">
-        <h1 id="page-title">Calls</h1>
-        <p id="page-subtitle">Live restaurant service requests</p>
+    <main class="main">
+      <div class="topbar">
+        <h1 class="page-title">Admin Dashboard</h1>
+        <div id="liveStatus" class="live-pill">Live refresh</div>
       </div>
 
-      <div class="status-row">
-        <div class="pill">
-          <span class="dot"></span>
-          <span>Live refresh</span>
-        </div>
-        <div class="pill" id="last-updated-pill">Updated --:--:--</div>
-      </div>
-    </div>
+      <section id="active-calls" class="section">
+        <h2 class="section-title">Active Calls</h2>
+        <p class="section-sub">Monitor incoming service requests in real time.</p>
 
-    <section id="calls-section" class="content-section active">
-      <div class="kpi-grid">
-        <div class="kpi">
-          <div class="kpi-label">Active calls</div>
-          <div class="kpi-value" id="kpi-active-calls">0</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">Tables</div>
-          <div class="kpi-value" id="kpi-table-count">0</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">Button mappings</div>
-          <div class="kpi-value" id="kpi-button-count">0</div>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-header-left">
-            <h2>Active calls</h2>
-            <div class="panel-subtitle">New calls appear automatically with sound and highlight</div>
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-label">Active calls</div>
+            <div id="activeCallsCount" class="stat-value">0</div>
           </div>
-          <button class="secondary" id="refresh-calls-btn">Refresh now</button>
+          <div class="stat-card">
+            <div class="stat-label">Coverage areas</div>
+            <div id="coverageAreaCount" class="stat-value">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Tables</div>
+            <div id="tableCount" class="stat-value">0</div>
+          </div>
         </div>
 
-        <div id="calls-list" class="list"></div>
-      </div>
-    </section>
+        <div id="callsList" class="card-list"></div>
+      </section>
 
-    <section id="tables-section" class="content-section">
-      <div class="grid">
-        <div class="panel">
-          <h2>Create table</h2>
-          <div class="panel-subtitle">Add a new restaurant table to Cue</div>
+      <section id="coverage-areas" class="section">
+        <h2 class="section-title">Coverage Areas</h2>
+        <p class="section-sub">Create service zones like Terrace, Main hall, and Upstairs.</p>
 
-          <div class="form-row">
-            <input id="new-table-name" type="text" placeholder="e.g. Table 12" />
-            <button class="primary" id="create-table-btn">Create table</button>
-          </div>
-
-          <div id="tables-message" class="message"></div>
+        <div class="form-row">
+          <input id="newCoverageAreaName" type="text" placeholder="Add new coverage area" />
+          <button class="btn btn-gold" onclick="createCoverageArea()">Add coverage area</button>
         </div>
 
-        <div class="panel">
-          <div class="panel-header">
-            <div class="panel-header-left">
-              <h2>Tables overview</h2>
-              <div class="panel-subtitle">Current tables in the restaurant</div>
-            </div>
-            <button class="secondary" id="refresh-tables-btn">Refresh</button>
-          </div>
+        <div id="coverageAreasList" class="card-list"></div>
+      </section>
 
-          <div id="tables-list" class="table-grid"></div>
-        </div>
-      </div>
-    </section>
+      <section id="tables" class="section">
+        <h2 class="section-title">Tables & Coverage Assignment</h2>
+        <p class="section-sub">Assign each table to the correct service area.</p>
 
-    <section id="buttons-section" class="content-section">
-      <div class="grid">
-        <div class="panel">
-          <h2>Assign button</h2>
-          <div class="panel-subtitle">Map a physical Flic button to a table</div>
-
-          <div class="form-row" style="margin-bottom: 12px;">
-            <input id="button-id-input" type="text" placeholder="e.g. 80:e4:da:79:ab:19" />
-          </div>
-
-          <div class="form-row">
-            <select id="button-table-select">
-              <option value="">Select table</option>
-            </select>
-            <button class="primary" id="assign-button-btn">Assign button</button>
-          </div>
-
-          <div class="muted-note">
-            Assigning an existing button ID updates its current table mapping.
-          </div>
-
-          <div id="buttons-message" class="message"></div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-header">
-            <div class="panel-header-left">
-              <h2>Current button mappings</h2>
-              <div class="panel-subtitle">Live button-to-table assignments</div>
-            </div>
-            <button class="secondary" id="refresh-buttons-btn">Refresh</button>
-          </div>
-
-          <div id="buttons-list" class="table-wrap"></div>
-        </div>
-      </div>
-    </section>
-  </main>
+        <div id="tablesList" class="card-list"></div>
+      </section>
+    </main>
+  </div>
 
   <script>
-    const API_BASE = "https://cue-backend-v2.onrender.com";
-    const POLL_INTERVAL_MS = 2000;
+    const API_BASE_URL = "https://cue-backend-v2.onrender.com";
 
-    let callsCache = [];
-    let tablesCache = [];
-    let buttonsCache = [];
-    let knownActiveCallIds = new Set();
-    let firstCallsLoadDone = false;
-    let audioUnlocked = false;
-
-    const pageMeta = {
-      "calls-section": {
-        title: "Calls",
-        subtitle: "Live restaurant service requests"
-      },
-      "tables-section": {
-        title: "Tables",
-        subtitle: "Create, clean up and manage restaurant tables"
-      },
-      "buttons-section": {
-        title: "Buttons",
-        subtitle: "Assign physical Flic buttons to restaurant tables"
-      }
-    };
-
-    const callsListEl = document.getElementById("calls-list");
-    const tablesListEl = document.getElementById("tables-list");
-    const buttonsListEl = document.getElementById("buttons-list");
-
-    const callsBadgeEl = document.getElementById("calls-badge");
-    const kpiActiveCallsEl = document.getElementById("kpi-active-calls");
-    const kpiTableCountEl = document.getElementById("kpi-table-count");
-    const kpiButtonCountEl = document.getElementById("kpi-button-count");
-    const lastUpdatedPillEl = document.getElementById("last-updated-pill");
-
-    const loggedInEmailEl = document.getElementById("logged-in-email");
-    const pageTitleEl = document.getElementById("page-title");
-    const pageSubtitleEl = document.getElementById("page-subtitle");
-
-    function setMessage(elementId, text, type) {
-      const el = document.getElementById(elementId);
-      el.textContent = text;
-      el.className = `message show ${type}`;
-    }
-
-    function clearMessage(elementId) {
-      const el = document.getElementById(elementId);
-      el.textContent = "";
-      el.className = "message";
-    }
-
-    function formatDateTime(value) {
-      try {
-        return new Date(value).toLocaleString();
-      } catch {
-        return value || "-";
-      }
-    }
+    let calls = [];
+    let coverageAreas = [];
+    let tables = [];
 
     function escapeHtml(value) {
       return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
 
-    async function apiFetch(path, options = {}) {
-      const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
+    function formatWaitingTime(createdAt) {
+      if (!createdAt) return "-";
+      const created = new Date(createdAt).getTime();
+      const now = Date.now();
+      const diffMs = Math.max(0, now - created);
+      const totalSeconds = Math.floor(diffMs / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
 
-      const response = await fetch(url, {
-        headers: {
-          "Content-Type": "application/json"
-        },
-        ...options
-      });
-
-      let data = null;
-      try {
-        data = await response.json();
-      } catch {
-        data = null;
+      if (minutes > 0) {
+        return `${minutes} min ${seconds}s`;
       }
+      return `${seconds}s`;
+    }
 
-      if (!response.ok) {
-        const message =
-          data?.error ||
-          data?.details ||
-          `Request failed (${response.status})`;
-        throw new Error(message);
-      }
-
+    async function apiGet(path) {
+      const res = await fetch(`${API_BASE_URL}${path}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Request failed");
       return data;
     }
 
-    function updateLastUpdated() {
-      const now = new Date();
-      lastUpdatedPillEl.textContent = `Updated ${now.toLocaleTimeString()}`;
+    async function apiPost(path, body) {
+      const res = await fetch(`${API_BASE_URL}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Request failed");
+      return data;
     }
 
-    function unlockAudio() {
-      if (audioUnlocked) return;
-      audioUnlocked = true;
-
-      try {
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextClass) return;
-
-        const ctx = new AudioContextClass();
-        const buffer = ctx.createBuffer(1, 1, 22050);
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(ctx.destination);
-        source.start(0);
-
-        if (ctx.state === "suspended") {
-          ctx.resume();
-        }
-      } catch (err) {
-        console.log("Audio unlock skipped", err);
-      }
-    }
-
-    function playNewCallSound() {
-      try {
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextClass) return;
-
-        const ctx = new AudioContextClass();
-
-        if (ctx.state === "suspended") {
-          ctx.resume();
-        }
-
-        const now = ctx.currentTime;
-
-        const osc1 = ctx.createOscillator();
-        const gain1 = ctx.createGain();
-        osc1.type = "sine";
-        osc1.frequency.setValueAtTime(880, now);
-        gain1.gain.setValueAtTime(0.0001, now);
-        gain1.gain.exponentialRampToValueAtTime(0.12, now + 0.01);
-        gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
-        osc1.connect(gain1);
-        gain1.connect(ctx.destination);
-        osc1.start(now);
-        osc1.stop(now + 0.2);
-
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-        osc2.type = "sine";
-        osc2.frequency.setValueAtTime(1174, now + 0.16);
-        gain2.gain.setValueAtTime(0.0001, now + 0.16);
-        gain2.gain.exponentialRampToValueAtTime(0.1, now + 0.18);
-        gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.34);
-        osc2.connect(gain2);
-        gain2.connect(ctx.destination);
-        osc2.start(now + 0.16);
-        osc2.stop(now + 0.36);
-      } catch (err) {
-        console.log("Sound play failed", err);
-      }
-    }
-
-    function getTableNameFromCall(call) {
-      if (call?.restaurant_tables?.name) return call.restaurant_tables.name;
-      if (Array.isArray(call?.restaurant_tables) && call.restaurant_tables[0]?.name) {
-        return call.restaurant_tables[0].name;
-      }
-      return "Unknown table";
-    }
-
-    function getMappingTableName(item) {
-      if (!item?.table_id) {
-        return "—";
-      }
-
-      const matchedTable = tablesCache.find((table) => table.id === item.table_id);
-      if (matchedTable?.name) {
-        return matchedTable.name;
-      }
-
-      if (item?.restaurant_tables?.name) {
-        return item.restaurant_tables.name;
-      }
-
-      if (Array.isArray(item?.restaurant_tables) && item.restaurant_tables[0]?.name) {
-        return item.restaurant_tables[0].name;
-      }
-
-      return "—";
-    }
-
-    function renderCalls(newCallIds = []) {
-      callsBadgeEl.textContent = String(callsCache.length);
-      kpiActiveCallsEl.textContent = String(callsCache.length);
-
-      if (!callsCache.length) {
-        callsListEl.innerHTML = `
-          <div class="empty">
-            No active calls right now.
-          </div>
-        `;
-        return;
-      }
-
-      callsListEl.innerHTML = callsCache.map((call) => {
-        const tableName = escapeHtml(getTableNameFromCall(call));
-        const callId = escapeHtml(call.id);
-        const createdAt = escapeHtml(formatDateTime(call.created_at));
-        const isNew = newCallIds.includes(call.id);
-
-        return `
-          <div class="row-card ${isNew ? "new-call" : ""}">
-            <div class="row-main">
-              <div class="row-title">${tableName}</div>
-              <div class="row-meta">
-                Call ID: ${callId}<br>
-                Created: ${createdAt}
-              </div>
-              <div class="call-status">
-                <span class="mini-dot"></span>
-                ACTIVE CALL
-              </div>
-            </div>
-
-            <div class="row-actions">
-              <button class="primary" onclick="clearCall('${call.id}')">Clear</button>
-            </div>
-          </div>
-        `;
-      }).join("");
-    }
-
-    function renderTables() {
-      kpiTableCountEl.textContent = String(tablesCache.length);
-
-      const select = document.getElementById("button-table-select");
-      select.innerHTML = `<option value="">Select table</option>` +
-        tablesCache.map((table) => {
-          return `<option value="${escapeHtml(table.id)}">${escapeHtml(table.name)}</option>`;
-        }).join("");
-
-      if (!tablesCache.length) {
-        tablesListEl.innerHTML = `
-          <div class="empty">
-            No tables yet. Create the first table on the left.
-          </div>
-        `;
-        return;
-      }
-
-      tablesListEl.innerHTML = tablesCache.map((table) => {
-        return `
-          <div class="row-card">
-            <div class="row-main">
-              <div class="row-title">${escapeHtml(table.name)}</div>
-              <div class="row-meta">ID: ${escapeHtml(table.id)}</div>
-            </div>
-
-            <div class="row-actions">
-              <button class="danger" onclick="deleteTable('${table.id}', '${escapeHtml(table.name)}')">Delete</button>
-            </div>
-          </div>
-        `;
-      }).join("");
-    }
-
-    function renderButtons() {
-      kpiButtonCountEl.textContent = String(buttonsCache.length);
-
-      if (!buttonsCache.length) {
-        buttonsListEl.innerHTML = `
-          <div class="empty">
-            No button mappings yet.
-          </div>
-        `;
-        return;
-      }
-
-      buttonsListEl.innerHTML = `
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>TABLE</th>
-              <th>BUTTON ID</th>
-              <th>STATUS</th>
-              <th>ACTION</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${buttonsCache.map((item) => {
-              const tableName = getMappingTableName(item);
-              const isAssigned = Boolean(item.table_id);
-
-              return `
-                <tr>
-                  <td>${escapeHtml(tableName)}</td>
-                  <td>${escapeHtml(item.id)}</td>
-                  <td>
-                    <span class="status-badge ${isAssigned ? "assigned" : "unassigned"}">
-                      ${isAssigned ? "Assigned" : "Unassigned"}
-                    </span>
-                  </td>
-                  <td>
-                    ${
-                      isAssigned
-                        ? `<button class="danger" onclick="unassignButton('${item.id}')">Remove button</button>`
-                        : `—`
-                    }
-                  </td>
-                </tr>
-              `;
-            }).join("")}
-          </tbody>
-        </table>
-      `;
+    async function apiDelete(path) {
+      const res = await fetch(`${API_BASE_URL}${path}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Request failed");
+      return data;
     }
 
     async function loadCalls() {
-      const data = await apiFetch("/calls");
-      const incomingCalls = Array.isArray(data?.calls) ? data.calls : [];
+      const result = await apiGet("/calls");
+      calls = result.calls || [];
+      renderCalls();
+    }
 
-      const currentIds = new Set(incomingCalls.map((call) => call.id));
-      let newCallIds = [];
-
-      if (firstCallsLoadDone) {
-        newCallIds = incomingCalls
-          .filter((call) => !knownActiveCallIds.has(call.id))
-          .map((call) => call.id);
-
-        if (newCallIds.length > 0) {
-          playNewCallSound();
-        }
-      }
-
-      callsCache = incomingCalls;
-      knownActiveCallIds = currentIds;
-      firstCallsLoadDone = true;
-
-      renderCalls(newCallIds);
-      updateLastUpdated();
+    async function loadCoverageAreas() {
+      coverageAreas = await apiGet("/coverage-areas");
+      renderCoverageAreas();
     }
 
     async function loadTables() {
-      const data = await apiFetch("/tables");
-      tablesCache = Array.isArray(data) ? data : [];
+      tables = await apiGet("/tables-with-areas");
       renderTables();
-      updateLastUpdated();
     }
 
-    async function loadButtons() {
-      const data = await apiFetch("/tables-with-buttons");
-      buttonsCache = Array.isArray(data) ? data : [];
-      renderButtons();
-      updateLastUpdated();
-    }
-
-    async function loadAll() {
+    async function refreshAll() {
       try {
-        await loadCalls();
-        await loadTables();
-        await loadButtons();
-      } catch (err) {
-        console.error("loadAll error", err);
+        await Promise.all([loadCalls(), loadCoverageAreas(), loadTables()]);
+        renderStats();
+      } catch (error) {
+        console.error(error);
       }
     }
 
-    async function createTable() {
-      clearMessage("tables-message");
+    function renderStats() {
+      document.getElementById("activeCallsCount").textContent = String(calls.length);
+      document.getElementById("coverageAreaCount").textContent = String(coverageAreas.length);
+      document.getElementById("tableCount").textContent = String(tables.length);
+    }
 
-      const input = document.getElementById("new-table-name");
-      const name = input.value.trim();
+    function renderCalls() {
+      const el = document.getElementById("callsList");
 
-      if (!name) {
-        setMessage("tables-message", "Please enter a table name.", "error");
+      if (!calls.length) {
+        el.innerHTML = `<div class="empty">No active calls right now.</div>`;
         return;
       }
 
-      try {
-        await apiFetch("/tables", {
-          method: "POST",
-          body: JSON.stringify({ name })
-        });
-
-        input.value = "";
-        setMessage("tables-message", "Table created successfully.", "success");
-        await loadTables();
-        await loadButtons();
-      } catch (err) {
-        setMessage("tables-message", err.message || "Failed to create table.", "error");
-      }
+      el.innerHTML = calls.map((call) => `
+        <div class="call-card">
+          <div class="call-main">
+            <div class="call-title">
+              ${escapeHtml(call.restaurant_tables?.name || "Unknown table")}
+              ${call.coverage_area_name ? `— ${escapeHtml(call.coverage_area_name)}` : ""}
+            </div>
+            <div class="meta">
+              Waiting time: <span class="accent">${escapeHtml(formatWaitingTime(call.created_at))}</span><br>
+              Created: ${escapeHtml(new Date(call.created_at).toLocaleString())}
+            </div>
+          </div>
+          <div>
+            <button class="btn btn-gold" onclick="clearCall('${escapeHtml(call.id)}')">Clear</button>
+          </div>
+        </div>
+      `).join("");
     }
 
-    async function deleteTable(tableId, tableName) {
-      const ok = confirm(`Delete ${tableName}? This will also remove related calls and unassign buttons.`);
-      if (!ok) return;
+    function renderCoverageAreas() {
+      const el = document.getElementById("coverageAreasList");
 
-      clearMessage("tables-message");
-
-      try {
-        await apiFetch(`/tables/${tableId}`, {
-          method: "DELETE"
-        });
-
-        setMessage("tables-message", `${tableName} deleted successfully.`, "success");
-        await loadAll();
-      } catch (err) {
-        setMessage("tables-message", err.message || "Failed to delete table.", "error");
-      }
-    }
-
-    async function assignButton() {
-      clearMessage("buttons-message");
-
-      const buttonId = document.getElementById("button-id-input").value.trim();
-      const tableId = document.getElementById("button-table-select").value;
-
-      if (!buttonId || !tableId) {
-        setMessage("buttons-message", "Please enter button ID and select a table.", "error");
+      if (!coverageAreas.length) {
+        el.innerHTML = `<div class="empty">No coverage areas yet.</div>`;
         return;
       }
 
-      try {
-        await apiFetch("/buttons/assign", {
-          method: "POST",
-          body: JSON.stringify({ buttonId, tableId })
-        });
-
-        document.getElementById("button-id-input").value = "";
-        document.getElementById("button-table-select").value = "";
-        setMessage("buttons-message", "Button assigned successfully.", "success");
-
-        await loadTables();
-        await loadButtons();
-      } catch (err) {
-        setMessage("buttons-message", err.message || "Failed to assign button.", "error");
-      }
+      el.innerHTML = coverageAreas.map((area) => `
+        <div class="area-card">
+          <div class="area-main">
+            <div class="area-title">${escapeHtml(area.name)}</div>
+            <div class="meta">${escapeHtml(area.table_count)} table(s) assigned</div>
+          </div>
+          <div>
+            <button class="btn btn-danger" onclick="deleteCoverageArea('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')">Delete</button>
+          </div>
+        </div>
+      `).join("");
     }
 
-    async function unassignButton(buttonId) {
-      clearMessage("buttons-message");
+    function renderTables() {
+      const el = document.getElementById("tablesList");
 
-      const ok = confirm(`Unassign button ${buttonId}?`);
-      if (!ok) return;
-
-      try {
-        await apiFetch("/buttons/unassign", {
-          method: "POST",
-          body: JSON.stringify({ buttonId })
-        });
-
-        setMessage("buttons-message", "Button unassigned successfully.", "success");
-
-        await loadTables();
-        await loadButtons();
-      } catch (err) {
-        setMessage("buttons-message", err.message || "Failed to unassign button.", "error");
+      if (!tables.length) {
+        el.innerHTML = `<div class="empty">No tables found.</div>`;
+        return;
       }
-    }
 
-    async function clearCall(callId) {
-      try {
-        await apiFetch(`/calls/${callId}/clear`, {
-          method: "POST"
-        });
+      const options = [
+        `<option value="">No area</option>`,
+        ...coverageAreas.map((area) => `
+          <option value="${escapeHtml(area.id)}">${escapeHtml(area.name)}</option>
+        `)
+      ].join("");
 
-        await loadCalls();
-      } catch (err) {
-        alert(err.message || "Failed to clear call.");
-      }
-    }
+      el.innerHTML = tables.map((table) => `
+        <div class="table-card">
+          <div class="table-main">
+            <div class="table-title">${escapeHtml(table.name)}</div>
+            <div class="meta">
+              Current area:
+              <span class="accent">${escapeHtml(table.coverage_area_name || "No area assigned")}</span>
+            </div>
+          </div>
+          <div>
+            <select onchange="assignCoverageArea('${escapeHtml(table.id)}', this.value)">
+              ${options}
+            </select>
+          </div>
+        </div>
+      `).join("");
 
-    function setupNavigation() {
-      const navButtons = document.querySelectorAll(".nav-btn");
-      const sections = document.querySelectorAll(".content-section");
-
-      navButtons.forEach((btn) => {
-        btn.addEventListener("click", () => {
-          navButtons.forEach((b) => b.classList.remove("active"));
-          sections.forEach((section) => section.classList.remove("active"));
-
-          btn.classList.add("active");
-
-          const target = btn.dataset.target;
-          document.getElementById(target).classList.add("active");
-
-          const meta = pageMeta[target];
-          if (meta) {
-            pageTitleEl.textContent = meta.title;
-            pageSubtitleEl.textContent = meta.subtitle;
+      tables.forEach((table) => {
+        const selects = el.querySelectorAll("select");
+        selects.forEach((select, index) => {
+          const currentTable = tables[index];
+          if (currentTable && currentTable.coverage_area_id) {
+            select.value = currentTable.coverage_area_id;
           }
         });
       });
     }
 
-    function setupLogout() {
-      document.getElementById("logout-btn").addEventListener("click", () => {
-        localStorage.removeItem("cue_admin_logged_in");
-        localStorage.removeItem("cue_admin_email");
-        sessionStorage.removeItem("cue_admin_logged_in");
-        sessionStorage.removeItem("cue_admin_email");
-        window.location.href = "/admin-login.html";
-      });
+    async function clearCall(callId) {
+      try {
+        await apiPost(`/calls/${callId}/clear`, {});
+        await refreshAll();
+      } catch (error) {
+        console.error(error);
+        alert("Failed to clear call");
+      }
     }
 
-    function loadLoggedInUser() {
-      const storedEmail =
-        localStorage.getItem("cue_admin_email") ||
-        sessionStorage.getItem("cue_admin_email") ||
-        "lehmuskoskironi@gmail.com";
+    async function createCoverageArea() {
+      const input = document.getElementById("newCoverageAreaName");
+      const name = input.value.trim();
 
-      loggedInEmailEl.textContent = storedEmail;
+      if (!name) {
+        alert("Enter a coverage area name");
+        return;
+      }
+
+      try {
+        await apiPost("/coverage-areas", { name });
+        input.value = "";
+        await refreshAll();
+      } catch (error) {
+        console.error(error);
+        alert("Failed to create coverage area");
+      }
     }
 
-    function setupEventHandlers() {
-      document.getElementById("create-table-btn").addEventListener("click", createTable);
-      document.getElementById("assign-button-btn").addEventListener("click", assignButton);
-      document.getElementById("refresh-calls-btn").addEventListener("click", loadCalls);
-      document.getElementById("refresh-tables-btn").addEventListener("click", async () => {
-        await loadTables();
-        await loadButtons();
-      });
-      document.getElementById("refresh-buttons-btn").addEventListener("click", async () => {
-        await loadTables();
-        await loadButtons();
-      });
+    async function deleteCoverageArea(areaId, areaName) {
+      const confirmed = confirm(`Delete coverage area "${areaName}"?`);
+      if (!confirmed) return;
 
-      document.getElementById("new-table-name").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") createTable();
-      });
-
-      document.getElementById("button-id-input").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") assignButton();
-      });
-
-      document.addEventListener("click", unlockAudio, { once: true });
-      document.addEventListener("keydown", unlockAudio, { once: true });
+      try {
+        await apiDelete(`/coverage-areas/${areaId}`);
+        await refreshAll();
+      } catch (error) {
+        console.error(error);
+        alert("Failed to delete coverage area");
+      }
     }
 
-    window.clearCall = clearCall;
-    window.deleteTable = deleteTable;
-    window.unassignButton = unassignButton;
-
-    async function init() {
-      loadLoggedInUser();
-      setupNavigation();
-      setupLogout();
-      setupEventHandlers();
-      await loadAll();
-      setInterval(loadAll, POLL_INTERVAL_MS);
+    async function assignCoverageArea(tableId, coverageAreaId) {
+      try {
+        await apiPost(`/tables/${tableId}/assign-coverage-area`, {
+          coverageAreaId: coverageAreaId || null
+        });
+        await refreshAll();
+      } catch (error) {
+        console.error(error);
+        alert("Failed to assign coverage area");
+      }
     }
 
-    init();
+    function openTVScreen() {
+      window.open("staff-dashboard.html", "_blank");
+    }
+
+    refreshAll();
+    setInterval(refreshAll, 3000);
   </script>
 </body>
 </html>
