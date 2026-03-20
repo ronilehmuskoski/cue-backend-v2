@@ -24,12 +24,126 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const DEFAULT_RESTAURANT_ID = "35c39532-212e-43c1-92f7-068bbd8fd060";
 
+// -----------------------------
+// HELPERS
+// -----------------------------
+function normalizeButtonId(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+async function handleButtonToggle(buttonId: string) {
+  const { data: button, error: buttonError } = await supabase
+    .from("buttons")
+    .select("*")
+    .eq("id", buttonId)
+    .single();
+
+  if (buttonError) {
+    console.error("Button lookup error:", buttonError);
+    throw new Error(buttonError.message);
+  }
+
+  if (!button || !button.table_id) {
+    const err: any = new Error("Button not assigned");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const { data: existingCalls, error: existingError } = await supabase
+    .from("calls")
+    .select("id, status, created_at, table_id")
+    .eq("table_id", button.table_id)
+    .eq("status", "ACTIVE")
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (existingError) {
+    console.error("Existing call lookup error:", existingError);
+    throw new Error(existingError.message);
+  }
+
+  const activeCall = existingCalls && existingCalls.length > 0 ? existingCalls[0] : null;
+
+  if (activeCall) {
+    const { data: clearedData, error: clearError } = await supabase
+      .from("calls")
+      .update({
+        status: "CLEARED",
+        cleared_at: new Date().toISOString(),
+      })
+      .eq("id", activeCall.id)
+      .select(`
+        id,
+        status,
+        created_at,
+        cleared_at,
+        table_id,
+        restaurant_tables (
+          id,
+          name
+        )
+      `);
+
+    if (clearError) {
+      console.error("Clear active call error:", clearError);
+      throw new Error(clearError.message);
+    }
+
+    return {
+      action: "cleared",
+      call: clearedData?.[0] || null,
+      table_id: button.table_id,
+      button_id: button.id,
+      message: "Active call cleared",
+    };
+  }
+
+  const { data: createdData, error: insertError } = await supabase
+    .from("calls")
+    .insert({
+      restaurant_id: button.restaurant_id || DEFAULT_RESTAURANT_ID,
+      table_id: button.table_id,
+      status: "ACTIVE",
+    })
+    .select(`
+      id,
+      status,
+      created_at,
+      table_id,
+      restaurant_tables (
+        id,
+        name
+      )
+    `);
+
+  if (insertError) {
+    console.error("Create call error:", insertError);
+    throw new Error(insertError.message);
+  }
+
+  return {
+    action: "created",
+    call: createdData?.[0] || null,
+    table_id: button.table_id,
+    button_id: button.id,
+    message: "New call created",
+  };
+}
+
+// -----------------------------
 // HEALTH
+// -----------------------------
 app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok" });
 });
 
+// -----------------------------
 // GET CALLS
+// -----------------------------
 app.get("/calls", async (_req: Request, res: Response) => {
   try {
     const { data, error } = await supabase
@@ -38,6 +152,7 @@ app.get("/calls", async (_req: Request, res: Response) => {
         id,
         status,
         created_at,
+        cleared_at,
         table_id,
         restaurant_tables (
           id,
@@ -59,7 +174,9 @@ app.get("/calls", async (_req: Request, res: Response) => {
   }
 });
 
+// -----------------------------
 // CLEAR CALL
+// -----------------------------
 app.post("/calls/:id/clear", async (req: Request, res: Response) => {
   try {
     const callId = req.params.id;
@@ -75,7 +192,17 @@ app.post("/calls/:id/clear", async (req: Request, res: Response) => {
         cleared_at: new Date().toISOString(),
       })
       .eq("id", callId)
-      .select();
+      .select(`
+        id,
+        status,
+        created_at,
+        cleared_at,
+        table_id,
+        restaurant_tables (
+          id,
+          name
+        )
+      `);
 
     if (error) {
       console.error("POST /calls/:id/clear error:", error);
@@ -89,70 +216,74 @@ app.post("/calls/:id/clear", async (req: Request, res: Response) => {
   }
 });
 
+// -----------------------------
 // FLIC WEBHOOK
+// 1st press = create ACTIVE call
+// 2nd press = clear ACTIVE call
+// -----------------------------
 app.post("/flic", async (req: Request, res: Response) => {
   try {
-    const buttonId =
+    const buttonId = normalizeButtonId(
       req.body?.buttonId ||
       req.body?.bdaddr ||
-      req.body?.button;
+      req.body?.button ||
+      req.body?.button_id ||
+      req.body?.id
+    );
 
     if (!buttonId) {
       return res.status(400).json({ error: "buttonId missing" });
     }
 
-    const { data: button, error: buttonError } = await supabase
-      .from("buttons")
-      .select("*")
-      .eq("id", buttonId)
-      .single();
+    const result = await handleButtonToggle(buttonId);
 
-    if (buttonError) {
-      console.error("POST /flic button lookup error:", buttonError);
-    }
-
-    if (!button || !button.table_id) {
-      return res.status(400).json({ error: "Button not assigned" });
-    }
-
-    const { data: existing, error: existingError } = await supabase
-      .from("calls")
-      .select("id")
-      .eq("table_id", button.table_id)
-      .eq("status", "ACTIVE")
-      .limit(1);
-
-    if (existingError) {
-      console.error("POST /flic existing call lookup error:", existingError);
-      return res.status(500).json({ error: existingError.message });
-    }
-
-    if (existing && existing.length > 0) {
-      return res.json({ message: "Call already active" });
-    }
-
-    const { data, error } = await supabase
-      .from("calls")
-      .insert({
-        restaurant_id: button.restaurant_id,
-        table_id: button.table_id,
-        status: "ACTIVE",
-      })
-      .select();
-
-    if (error) {
-      console.error("POST /flic insert call error:", error);
-      return res.status(500).json({ error: error.message });
-    }
-
-    return res.status(201).json(data?.[0]);
+    return res.status(result.action === "created" ? 201 : 200).json(result);
   } catch (err: any) {
     console.error("POST /flic catch error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+
+    if (err?.statusCode) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+
+    return res.status(500).json({ error: err.message || "Internal server error" });
   }
 });
 
+// -----------------------------
+// BUTTON PRESS ALIAS
+// same logic as /flic
+// -----------------------------
+app.post("/button-press", async (req: Request, res: Response) => {
+  try {
+    const buttonId = normalizeButtonId(
+      req.body?.buttonId ||
+      req.body?.bdaddr ||
+      req.body?.button ||
+      req.body?.button_id ||
+      req.body?.id
+    );
+
+    if (!buttonId) {
+      return res.status(400).json({ error: "buttonId missing" });
+    }
+
+    const result = await handleButtonToggle(buttonId);
+
+    return res.status(result.action === "created" ? 201 : 200).json(result);
+  } catch (err: any) {
+    console.error("POST /button-press catch error:", err);
+
+    if (err?.statusCode) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+
+    return res.status(500).json({ error: err.message || "Internal server error" });
+  }
+});
+
+// -----------------------------
 // GET TABLES
+// -----------------------------
 app.get("/tables", async (_req: Request, res: Response) => {
   try {
     const { data, error } = await supabase
@@ -173,11 +304,12 @@ app.get("/tables", async (_req: Request, res: Response) => {
   }
 });
 
+// -----------------------------
 // CREATE TABLE
+// -----------------------------
 app.post("/tables", async (req: Request, res: Response) => {
   try {
-    const rawName = req.body?.name;
-    const name = typeof rawName === "string" ? rawName.trim() : "";
+    const name = normalizeString(req.body?.name);
 
     if (!name) {
       return res.status(400).json({ error: "name required" });
@@ -203,7 +335,9 @@ app.post("/tables", async (req: Request, res: Response) => {
   }
 });
 
+// -----------------------------
 // DELETE TABLE
+// -----------------------------
 app.delete("/tables/:id", async (req: Request, res: Response) => {
   try {
     const tableId = req.params.id;
@@ -262,7 +396,9 @@ app.delete("/tables/:id", async (req: Request, res: Response) => {
   }
 });
 
+// -----------------------------
 // TABLES WITH BUTTONS
+// -----------------------------
 app.get("/tables-with-buttons", async (_req: Request, res: Response) => {
   try {
     const { data: buttons, error: buttonsError } = await supabase
@@ -305,14 +441,13 @@ app.get("/tables-with-buttons", async (_req: Request, res: Response) => {
   }
 });
 
+// -----------------------------
 // ASSIGN BUTTON
+// -----------------------------
 app.post("/buttons/assign", async (req: Request, res: Response) => {
   try {
-    const rawButtonId = req.body?.buttonId;
-    const rawTableId = req.body?.tableId;
-
-    const buttonId = typeof rawButtonId === "string" ? rawButtonId.trim() : "";
-    const tableId = typeof rawTableId === "string" ? rawTableId.trim() : "";
+    const buttonId = normalizeString(req.body?.buttonId);
+    const tableId = normalizeString(req.body?.tableId);
 
     if (!buttonId || !tableId) {
       return res.status(400).json({ error: "missing fields" });
@@ -386,11 +521,12 @@ app.post("/buttons/assign", async (req: Request, res: Response) => {
   }
 });
 
+// -----------------------------
 // UNASSIGN BUTTON
+// -----------------------------
 app.post("/buttons/unassign", async (req: Request, res: Response) => {
   try {
-    const rawButtonId = req.body?.buttonId;
-    const buttonId = typeof rawButtonId === "string" ? rawButtonId.trim() : "";
+    const buttonId = normalizeString(req.body?.buttonId);
 
     if (!buttonId) {
       return res.status(400).json({ error: "buttonId required" });
