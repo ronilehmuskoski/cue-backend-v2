@@ -28,6 +28,8 @@
       border-right: 1px solid rgba(212,175,55,0.18);
       padding: 28px 22px;
       background: rgba(8,8,10,0.92);
+      display: flex;
+      flex-direction: column;
     }
 
     .brand {
@@ -49,7 +51,7 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
-      margin-bottom: 32px;
+      margin-bottom: 20px;
     }
 
     .nav a {
@@ -75,10 +77,53 @@
       font-weight: 800;
       cursor: pointer;
       font-size: 15px;
+      margin-bottom: 20px;
     }
 
     .tv-button:hover {
       opacity: 0.95;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 20px;
+      border-top: 1px solid rgba(212,175,55,0.14);
+    }
+
+    .user-box {
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(212,175,55,0.14);
+      margin-bottom: 12px;
+    }
+
+    .user-label {
+      font-size: 12px;
+      color: #9e8b65;
+      margin-bottom: 6px;
+    }
+
+    .user-email {
+      font-size: 14px;
+      color: #f5e7c1;
+      word-break: break-word;
+    }
+
+    .logout-button {
+      width: 100%;
+      padding: 13px 16px;
+      background: #1c1a1e;
+      color: #f5e8c4;
+      border: 1px solid rgba(212,175,55,0.18);
+      border-radius: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .logout-button:hover {
+      border-color: rgba(212,175,55,0.45);
     }
 
     .main {
@@ -290,6 +335,14 @@
       </div>
 
       <button class="tv-button" onclick="openTVScreen()">Open TV Call Screen</button>
+
+      <div class="sidebar-footer">
+        <div class="user-box">
+          <div class="user-label">Logged in as</div>
+          <div id="loggedInEmail" class="user-email">Loading...</div>
+        </div>
+        <button class="logout-button" onclick="logout()">Log out</button>
+      </div>
     </aside>
 
     <main class="main">
@@ -341,8 +394,27 @@
     </main>
   </div>
 
-  <script>
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+    const SUPABASE_URL = "https://xbgvfbyhzvpwwpfwhhci.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhiZ3ZmYnloenZwd3dwZndoaGNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNDY4OTAsImV4cCI6MjA4ODcyMjg5MH0.6YqNyXxJdxJuW3hg_ACulJaNEzJAGBwRbJKDNQVSjuk";
     const API_BASE_URL = "https://cue-backend-v2.onrender.com";
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError || !sessionData?.session) {
+      window.location.href = "/admin-login.html";
+      throw new Error("No active session");
+    }
+
+    const user = sessionData.session.user;
+    const loggedInEmailEl = document.getElementById("loggedInEmail");
+    if (loggedInEmailEl) {
+      loggedInEmailEl.textContent = user?.email || "Unknown user";
+    }
 
     let calls = [];
     let coverageAreas = [];
@@ -575,9 +647,21 @@
       }
     }
 
+    async function logout() {
+      await supabase.auth.signOut();
+      window.location.href = "/admin-login.html";
+    }
+
     function openTVScreen() {
       window.open("staff-dashboard.html", "_blank");
     }
+
+    window.clearCall = clearCall;
+    window.createCoverageArea = createCoverageArea;
+    window.deleteCoverageArea = deleteCoverageArea;
+    window.assignCoverageArea = assignCoverageArea;
+    window.logout = logout;
+    window.openTVScreen = openTVScreen;
 
     refreshAll();
     setInterval(refreshAll, 3000);

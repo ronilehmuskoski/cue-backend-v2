@@ -3,66 +3,53 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cue Admin Login</title>
-
+  <title>Cue Login</title>
   <style>
     * {
       box-sizing: border-box;
     }
 
-    :root {
-      --bg: #0a0a0b;
-      --card: #121214;
-      --card-2: #17171a;
-      --border: #232327;
-      --text: #f5f5f2;
-      --muted: #a1a1aa;
-      --gold: #d4af37;
-      --gold-hover: #e5c75a;
-    }
-
     body {
       margin: 0;
       min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(212,175,55,0.10), transparent 35%),
+        linear-gradient(180deg, #0d0c0f 0%, #08080a 100%);
+      color: #f5e7c1;
       display: flex;
       align-items: center;
       justify-content: center;
-      background:
-        radial-gradient(circle at top left, rgba(212, 175, 55, 0.08), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(212, 175, 55, 0.06), transparent 24%),
-        var(--bg);
-      font-family: Arial, sans-serif;
-      color: var(--text);
       padding: 24px;
     }
 
-    .login-card {
+    .card {
       width: 100%;
-      max-width: 420px;
-      background: linear-gradient(180deg, var(--card) 0%, var(--card-2) 100%);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 28px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      max-width: 460px;
+      background: linear-gradient(180deg, rgba(20,20,24,0.95), rgba(15,15,18,0.95));
+      border: 1px solid rgba(212,175,55,0.18);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 18px 60px rgba(0,0,0,0.28);
     }
 
-    .logo {
-      font-size: 36px;
+    .brand {
+      font-size: 40px;
       font-weight: 800;
-      color: var(--gold);
-      margin-bottom: 10px;
-      letter-spacing: -1px;
-    }
-
-    .title {
-      font-size: 28px;
-      font-weight: 800;
+      letter-spacing: 3px;
+      color: #e1be61;
       margin-bottom: 8px;
     }
 
-    .subtitle {
-      color: var(--muted);
-      font-size: 15px;
+    .title {
+      font-size: 30px;
+      font-weight: 800;
+      color: #fff1ca;
+      margin: 0 0 10px;
+    }
+
+    .sub {
+      color: #bca882;
       margin-bottom: 24px;
       line-height: 1.5;
     }
@@ -71,128 +58,157 @@
       margin-bottom: 14px;
     }
 
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #d5c29a;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
     input {
       width: 100%;
-      padding: 14px 16px;
+      min-height: 48px;
+      padding: 12px 14px;
       border-radius: 12px;
-      border: 1px solid var(--border);
-      background: #0f0f12;
-      color: var(--text);
+      border: 1px solid rgba(212,175,55,0.18);
+      background: #121216;
+      color: #f5e7c1;
       font-size: 15px;
-      outline: none;
     }
 
-    input::placeholder {
-      color: #6b7280;
-    }
-
-    .button {
+    button {
       width: 100%;
-      padding: 14px 16px;
+      min-height: 50px;
       border: none;
       border-radius: 12px;
-      background: var(--gold);
-      color: #111;
+      background: #ddb455;
+      color: #17130b;
       font-size: 16px;
       font-weight: 800;
       cursor: pointer;
-      transition: 0.2s ease;
-      margin-top: 6px;
+      margin-top: 8px;
     }
 
-    .button:hover {
-      background: var(--gold-hover);
+    button:hover {
+      opacity: 0.95;
     }
 
-    .message {
+    button:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    .error {
+      display: none;
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #5b1f1f;
+      color: #ffd5d5;
+      border: 1px solid #8e3030;
+    }
+
+    .info {
       margin-top: 16px;
-      font-size: 14px;
-      color: #fca5a5;
-      min-height: 20px;
-    }
-
-    .success {
-      color: #86efac;
+      color: #9e8b65;
+      font-size: 13px;
+      line-height: 1.5;
     }
   </style>
 </head>
 <body>
-  <div class="login-card">
-    <div class="logo">Cue</div>
-    <div class="title">Admin Login</div>
-    <div class="subtitle">
-      Sign in to manage calls, tables and buttons.
+  <div class="card">
+    <div class="brand">CUE</div>
+    <h1 class="title">Restaurant Login</h1>
+    <div class="sub">Sign in to access your restaurant dashboard.</div>
+
+    <form id="loginForm">
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="email" required />
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" required />
+      </div>
+
+      <button id="loginButton" type="submit">Log in</button>
+    </form>
+
+    <div id="errorBox" class="error"></div>
+
+    <div class="info">
+      Demo login for restaurant admins. After login, you will be redirected to the admin dashboard.
     </div>
-
-    <div class="field">
-      <input id="email" type="email" placeholder="Email" />
-    </div>
-
-    <div class="field">
-      <input id="password" type="password" placeholder="Password" />
-    </div>
-
-    <button class="button" id="login-button">Log in</button>
-
-    <div class="message" id="message"></div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-  <script>
     const SUPABASE_URL = "https://xbgvfbyhzvpwwpfwhhci.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_PD1G58QCYrh8MCoS2-1eVg_gaP9fElz";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhiZ3ZmYnloenZwd3dwZndoaGNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNDY4OTAsImV4cCI6MjA4ODcyMjg5MH0.6YqNyXxJdxJuW3hg_ACulJaNEzJAGBwRbJKDNQVSjuk";
 
-    const supabaseClient = window.supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_ANON_KEY
-    );
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    async function redirectIfAlreadyLoggedIn() {
-      const { data } = await supabaseClient.auth.getSession();
+    const loginForm = document.getElementById("loginForm");
+    const loginButton = document.getElementById("loginButton");
+    const errorBox = document.getElementById("errorBox");
 
-      if (data.session) {
+    function showError(message) {
+      errorBox.style.display = "block";
+      errorBox.textContent = message;
+    }
+
+    function hideError() {
+      errorBox.style.display = "none";
+      errorBox.textContent = "";
+    }
+
+    async function redirectIfLoggedIn() {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error) {
+        return;
+      }
+
+      if (data?.session) {
         window.location.href = "/admin-dashboard.html";
       }
     }
 
-    async function login() {
+    loginForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      hideError();
+
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value;
-      const message = document.getElementById("message");
 
-      message.textContent = "";
+      loginButton.disabled = true;
+      loginButton.textContent = "Logging in...";
 
-      if (!email || !password) {
-        message.textContent = "Enter email and password.";
-        return;
-      }
+      try {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-      const { error } = await supabaseClient.auth.signInWithPassword({
-        email,
-        password
-      });
+        if (error) {
+          throw error;
+        }
 
-      if (error) {
-        message.textContent = error.message;
-        return;
-      }
-
-      message.textContent = "Login successful.";
-      message.classList.add("success");
-
-      window.location.href = "/admin-dashboard.html";
-    }
-
-    document.getElementById("login-button").addEventListener("click", login);
-
-    document.getElementById("password").addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        login();
+        window.location.href = "/admin-dashboard.html";
+      } catch (error) {
+        console.error(error);
+        showError(error.message || "Login failed");
+      } finally {
+        loginButton.disabled = false;
+        loginButton.textContent = "Log in";
       }
     });
 
-    redirectIfAlreadyLoggedIn();
+    redirectIfLoggedIn();
   </script>
 </body>
 </html>
