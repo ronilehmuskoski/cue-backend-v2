@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cue Admin Dashboard</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -80,10 +78,6 @@
       margin-bottom: 20px;
     }
 
-    .tv-button:hover {
-      opacity: 0.95;
-    }
-
     .sidebar-footer {
       margin-top: auto;
       padding-top: 20px;
@@ -120,10 +114,6 @@
       font-weight: 800;
       cursor: pointer;
       font-size: 15px;
-    }
-
-    .logout-button:hover {
-      border-color: rgba(212,175,55,0.45);
     }
 
     .main {
@@ -211,7 +201,8 @@
 
     .call-card,
     .area-card,
-    .table-card {
+    .table-card,
+    .button-card {
       display: flex;
       justify-content: space-between;
       gap: 16px;
@@ -225,14 +216,16 @@
 
     .call-main,
     .area-main,
-    .table-main {
+    .table-main,
+    .button-main {
       flex: 1;
       min-width: 240px;
     }
 
     .call-title,
     .area-title,
-    .table-title {
+    .table-title,
+    .button-title {
       font-size: 20px;
       font-weight: 800;
       color: #fff0c6;
@@ -264,15 +257,15 @@
       color: #17130b;
     }
 
+    .btn-danger {
+      background: #6e2d2d;
+      color: white;
+    }
+
     .btn-dark {
       background: #1c1a1e;
       color: #f5e8c4;
       border: 1px solid rgba(212,175,55,0.18);
-    }
-
-    .btn-danger {
-      background: #6e2d2d;
-      color: white;
     }
 
     .form-row {
@@ -300,6 +293,7 @@
 
     select {
       min-width: 220px;
+      flex: 1;
     }
 
     .empty {
@@ -332,6 +326,7 @@
         <a href="#active-calls">Calls</a>
         <a href="#coverage-areas">Coverage Areas</a>
         <a href="#tables">Tables</a>
+        <a href="#buttons">Buttons</a>
       </div>
 
       <button class="tv-button" onclick="openTVScreen()">Open TV Call Screen</button>
@@ -386,10 +381,30 @@
       </section>
 
       <section id="tables" class="section">
-        <h2 class="section-title">Tables & Coverage Assignment</h2>
-        <p class="section-sub">Assign each table to the correct service area.</p>
+        <h2 class="section-title">Tables</h2>
+        <p class="section-sub">Create tables and assign them to service areas.</p>
+
+        <div class="form-row">
+          <input id="newTableName" type="text" placeholder="Add new table (e.g. Table 12)" />
+          <button class="btn btn-gold" onclick="createTable()">Add table</button>
+        </div>
 
         <div id="tablesList" class="card-list"></div>
+      </section>
+
+      <section id="buttons" class="section">
+        <h2 class="section-title">Buttons</h2>
+        <p class="section-sub">Assign physical Flic buttons to tables.</p>
+
+        <div class="form-row">
+          <input id="buttonIdInput" type="text" placeholder="Button ID / bdaddr" />
+          <select id="buttonTableSelect">
+            <option value="">Select table</option>
+          </select>
+          <button class="btn btn-gold" onclick="assignButton()">Assign button</button>
+        </div>
+
+        <div id="buttonsList" class="card-list"></div>
       </section>
     </main>
   </div>
@@ -411,6 +426,8 @@
     }
 
     const user = sessionData.session.user;
+    const accessToken = sessionData.session.access_token;
+
     const loggedInEmailEl = document.getElementById("loggedInEmail");
     if (loggedInEmailEl) {
       loggedInEmailEl.textContent = user?.email || "Unknown user";
@@ -419,6 +436,7 @@
     let calls = [];
     let coverageAreas = [];
     let tables = [];
+    let buttons = [];
 
     function escapeHtml(value) {
       return String(value ?? "")
@@ -444,52 +462,50 @@
       return `${seconds}s`;
     }
 
-    async function apiGet(path) {
-      const res = await fetch(`${API_BASE_URL}${path}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Request failed");
-      return data;
-    }
-
-    async function apiPost(path, body) {
-      const res = await fetch(`${API_BASE_URL}${path}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+    async function authFetch(path, options = {}) {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+          ...(options.headers || {})
+        }
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Request failed");
-      return data;
-    }
 
-    async function apiDelete(path) {
-      const res = await fetch(`${API_BASE_URL}${path}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Request failed");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Request failed");
+      }
+
       return data;
     }
 
     async function loadCalls() {
-      const result = await apiGet("/calls");
+      const result = await authFetch("/calls");
       calls = result.calls || [];
       renderCalls();
     }
 
     async function loadCoverageAreas() {
-      coverageAreas = await apiGet("/coverage-areas");
+      coverageAreas = await authFetch("/coverage-areas");
       renderCoverageAreas();
     }
 
     async function loadTables() {
-      tables = await apiGet("/tables-with-areas");
+      tables = await authFetch("/tables-with-areas");
       renderTables();
+      renderButtonTableOptions();
+    }
+
+    async function loadButtons() {
+      buttons = await authFetch("/tables-with-buttons");
+      renderButtons();
     }
 
     async function refreshAll() {
       try {
-        await Promise.all([loadCalls(), loadCoverageAreas(), loadTables()]);
+        await Promise.all([loadCalls(), loadCoverageAreas(), loadTables(), loadButtons()]);
         renderStats();
       } catch (error) {
         console.error(error);
@@ -515,7 +531,7 @@
           <div class="call-main">
             <div class="call-title">
               ${escapeHtml(call.restaurant_tables?.name || "Unknown table")}
-              ${call.coverage_area_name ? `— ${escapeHtml(call.coverage_area_name)}` : ""}
+              ${call.coverage_area_name ? ` — ${escapeHtml(call.coverage_area_name)}` : ""}
             </div>
             <div class="meta">
               Waiting time: <span class="accent">${escapeHtml(formatWaitingTime(call.created_at))}</span><br>
@@ -558,7 +574,7 @@
         return;
       }
 
-      const options = [
+      const areaOptions = [
         `<option value="">No area</option>`,
         ...coverageAreas.map((area) => `
           <option value="${escapeHtml(area.id)}">${escapeHtml(area.name)}</option>
@@ -574,28 +590,64 @@
               <span class="accent">${escapeHtml(table.coverage_area_name || "No area assigned")}</span>
             </div>
           </div>
-          <div>
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
             <select onchange="assignCoverageArea('${escapeHtml(table.id)}', this.value)">
-              ${options}
+              ${areaOptions}
             </select>
+            <button class="btn btn-danger" onclick="deleteTable('${escapeHtml(table.id)}', '${escapeHtml(table.name)}')">Delete</button>
           </div>
         </div>
       `).join("");
 
-      tables.forEach((table) => {
-        const selects = el.querySelectorAll("select");
-        selects.forEach((select, index) => {
-          const currentTable = tables[index];
-          if (currentTable && currentTable.coverage_area_id) {
-            select.value = currentTable.coverage_area_id;
-          }
-        });
+      const selects = el.querySelectorAll("select");
+      selects.forEach((select, index) => {
+        const table = tables[index];
+        if (table && table.coverage_area_id) {
+          select.value = table.coverage_area_id;
+        }
       });
+    }
+
+    function renderButtonTableOptions() {
+      const select = document.getElementById("buttonTableSelect");
+      select.innerHTML = `
+        <option value="">Select table</option>
+        ${tables.map((table) => `
+          <option value="${escapeHtml(table.id)}">${escapeHtml(table.name)}</option>
+        `).join("")}
+      `;
+    }
+
+    function renderButtons() {
+      const el = document.getElementById("buttonsList");
+
+      if (!buttons.length) {
+        el.innerHTML = `<div class="empty">No buttons assigned yet.</div>`;
+        return;
+      }
+
+      el.innerHTML = buttons.map((button) => `
+        <div class="button-card">
+          <div class="button-main">
+            <div class="button-title">${escapeHtml(button.id)}</div>
+            <div class="meta">
+              Table: <span class="accent">${escapeHtml(button.table_name || "Unassigned")}</span><br>
+              Coverage area: ${escapeHtml(button.coverage_area_name || "No area")}
+            </div>
+          </div>
+          <div>
+            <button class="btn btn-danger" onclick="unassignButton('${escapeHtml(button.id)}')">Unassign</button>
+          </div>
+        </div>
+      `).join("");
     }
 
     async function clearCall(callId) {
       try {
-        await apiPost(`/calls/${callId}/clear`, {});
+        await authFetch(`/calls/${callId}/clear`, {
+          method: "POST",
+          body: JSON.stringify({})
+        });
         await refreshAll();
       } catch (error) {
         console.error(error);
@@ -613,7 +665,10 @@
       }
 
       try {
-        await apiPost("/coverage-areas", { name });
+        await authFetch("/coverage-areas", {
+          method: "POST",
+          body: JSON.stringify({ name })
+        });
         input.value = "";
         await refreshAll();
       } catch (error) {
@@ -627,7 +682,9 @@
       if (!confirmed) return;
 
       try {
-        await apiDelete(`/coverage-areas/${areaId}`);
+        await authFetch(`/coverage-areas/${areaId}`, {
+          method: "DELETE"
+        });
         await refreshAll();
       } catch (error) {
         console.error(error);
@@ -637,13 +694,90 @@
 
     async function assignCoverageArea(tableId, coverageAreaId) {
       try {
-        await apiPost(`/tables/${tableId}/assign-coverage-area`, {
-          coverageAreaId: coverageAreaId || null
+        await authFetch(`/tables/${tableId}/assign-coverage-area`, {
+          method: "POST",
+          body: JSON.stringify({
+            coverageAreaId: coverageAreaId || null
+          })
         });
         await refreshAll();
       } catch (error) {
         console.error(error);
         alert("Failed to assign coverage area");
+      }
+    }
+
+    async function createTable() {
+      const input = document.getElementById("newTableName");
+      const name = input.value.trim();
+
+      if (!name) {
+        alert("Enter a table name");
+        return;
+      }
+
+      try {
+        await authFetch("/tables", {
+          method: "POST",
+          body: JSON.stringify({ name })
+        });
+        input.value = "";
+        await refreshAll();
+      } catch (error) {
+        console.error(error);
+        alert("Failed to create table");
+      }
+    }
+
+    async function deleteTable(tableId, tableName) {
+      const confirmed = confirm(`Delete table "${tableName}"?`);
+      if (!confirmed) return;
+
+      try {
+        await authFetch(`/tables/${tableId}`, {
+          method: "DELETE"
+        });
+        await refreshAll();
+      } catch (error) {
+        console.error(error);
+        alert("Failed to delete table");
+      }
+    }
+
+    async function assignButton() {
+      const buttonId = document.getElementById("buttonIdInput").value.trim();
+      const tableId = document.getElementById("buttonTableSelect").value;
+
+      if (!buttonId || !tableId) {
+        alert("Enter button ID and select table");
+        return;
+      }
+
+      try {
+        await authFetch("/buttons/assign", {
+          method: "POST",
+          body: JSON.stringify({ buttonId, tableId })
+        });
+
+        document.getElementById("buttonIdInput").value = "";
+        document.getElementById("buttonTableSelect").value = "";
+        await refreshAll();
+      } catch (error) {
+        console.error(error);
+        alert("Failed to assign button");
+      }
+    }
+
+    async function unassignButton(buttonId) {
+      try {
+        await authFetch("/buttons/unassign", {
+          method: "POST",
+          body: JSON.stringify({ buttonId })
+        });
+        await refreshAll();
+      } catch (error) {
+        console.error(error);
+        alert("Failed to unassign button");
       }
     }
 
@@ -660,6 +794,10 @@
     window.createCoverageArea = createCoverageArea;
     window.deleteCoverageArea = deleteCoverageArea;
     window.assignCoverageArea = assignCoverageArea;
+    window.createTable = createTable;
+    window.deleteTable = deleteTable;
+    window.assignButton = assignButton;
+    window.unassignButton = unassignButton;
     window.logout = logout;
     window.openTVScreen = openTVScreen;
 

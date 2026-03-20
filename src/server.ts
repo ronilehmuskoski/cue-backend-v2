@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, User } from "@supabase/supabase-js";
 import path from "path";
 
 dotenv.config();
@@ -22,7 +22,14 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-const DEFAULT_RESTAURANT_ID = "35c39532-212e-43c1-92f7-068bbd8fd060";
+// -----------------------------
+// TYPES
+// -----------------------------
+type RestaurantContext = {
+  user: User;
+  restaurantId: string;
+  role: string;
+};
 
 // -----------------------------
 // HELPERS
@@ -35,11 +42,54 @@ function normalizeButtonId(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-async function getCoverageAreaNameMap() {
+function getBearerToken(req: Request): string | null {
+  const authHeader = req.headers.authorization || "";
+  if (!authHeader.startsWith("Bearer ")) return null;
+  const token = authHeader.slice("Bearer ".length).trim();
+  return token || null;
+}
+
+async function getRestaurantContext(req: Request): Promise<RestaurantContext> {
+  const token = getBearerToken(req);
+
+  if (!token) {
+    const err: any = new Error("Missing authorization token");
+    err.statusCode = 401;
+    throw err;
+  }
+
+  const { data: userData, error: userError } = await supabase.auth.getUser(token);
+
+  if (userError || !userData?.user) {
+    const err: any = new Error("Invalid or expired token");
+    err.statusCode = 401;
+    throw err;
+  }
+
+  const { data: membership, error: membershipError } = await supabase
+    .from("user_restaurants")
+    .select("restaurant_id, role")
+    .eq("user_id", userData.user.id)
+    .single();
+
+  if (membershipError || !membership?.restaurant_id) {
+    const err: any = new Error("No restaurant membership found for user");
+    err.statusCode = 403;
+    throw err;
+  }
+
+  return {
+    user: userData.user,
+    restaurantId: membership.restaurant_id,
+    role: membership.role || "admin",
+  };
+}
+
+async function getCoverageAreaNameMap(restaurantId: string) {
   const { data, error } = await supabase
     .from("coverage_areas")
     .select("id, name")
-    .eq("restaurant_id", DEFAULT_RESTAURANT_ID);
+    .eq("restaurant_id", restaurantId);
 
   if (error) {
     throw new Error(error.message);
@@ -64,7 +114,7 @@ async function handleButtonToggle(buttonId: string) {
     throw new Error(buttonError.message);
   }
 
-  if (!button || !button.table_id) {
+  if (!button || !button.table_id || !button.restaurant_id) {
     const err: any = new Error("Button not assigned");
     err.statusCode = 400;
     throw err;
@@ -72,8 +122,9 @@ async function handleButtonToggle(buttonId: string) {
 
   const { data: existingCalls, error: existingError } = await supabase
     .from("calls")
-    .select("id, status, created_at, table_id")
+    .select("id, status, created_at, table_id, restaurant_id")
     .eq("table_id", button.table_id)
+    .eq("restaurant_id", button.restaurant_id)
     .eq("status", "ACTIVE")
     .order("created_at", { ascending: false })
     .limit(1);
@@ -93,6 +144,7 @@ async function handleButtonToggle(buttonId: string) {
         cleared_at: new Date().toISOString(),
       })
       .eq("id", activeCall.id)
+      .eq("restaurant_id", button.restaurant_id)
       .select(`
         id,
         status,
@@ -115,6 +167,7 @@ async function handleButtonToggle(buttonId: string) {
       call: clearedData?.[0] || null,
       table_id: button.table_id,
       button_id: button.id,
+      restaurant_id: button.restaurant_id,
       message: "Active call cleared",
     };
   }
@@ -122,7 +175,7 @@ async function handleButtonToggle(buttonId: string) {
   const { data: createdData, error: insertError } = await supabase
     .from("calls")
     .insert({
-      restaurant_id: button.restaurant_id || DEFAULT_RESTAURANT_ID,
+      restaurant_id: button.restaurant_id,
       table_id: button.table_id,
       status: "ACTIVE",
     })
@@ -147,6 +200,7 @@ async function handleButtonToggle(buttonId: string) {
     call: createdData?.[0] || null,
     table_id: button.table_id,
     button_id: button.id,
+    restaurant_id: button.restaurant_id,
     message: "New call created",
   };
 }
@@ -159,10 +213,29 @@ app.get("/health", (_req: Request, res: Response) => {
 });
 
 // -----------------------------
+// SESSION DEBUG
+// -----------------------------
+app.get("/me", async (req: Request, res: Response) => {
+  try {
+    const context = await getRestaurantContext(req);
+    return res.json({
+      user_id: context.user.id,
+      email: context.user.email,
+      restaurant_id: context.restaurantId,
+      role: context.role,
+    });
+  } catch (err: any) {
+    return res.status(err?.statusCode || 500).json({ error: err.message || "Internal server error" });
+  }
+});
+
+// -----------------------------
 // GET ACTIVE CALLS
 // -----------------------------
-app.get("/calls", async (_req: Request, res: Response) => {
+app.get("/calls", async (req: Request, res: Response) => {
   try {
+    const context = await getRestaurantContext(req);
+
     const { data, error } = await supabase
       .from("calls")
       .select(`
@@ -171,12 +244,14 @@ app.get("/calls", async (_req: Request, res: Response) => {
         created_at,
         cleared_at,
         table_id,
+        restaurant_id,
         restaurant_tables (
           id,
           name,
           coverage_area_id
         )
       `)
+      .eq("restaurant_id", context.restaurantId)
       .eq("status", "ACTIVE")
       .order("created_at", { ascending: false });
 
@@ -185,7 +260,7 @@ app.get("/calls", async (_req: Request, res: Response) => {
       return res.status(500).json({ error: error.message });
     }
 
-    const areaMap = await getCoverageAreaNameMap();
+    const areaMap = await getCoverageAreaNameMap(context.restaurantId);
 
     const calls = (data || []).map((call: any) => ({
       ...call,
@@ -197,7 +272,7 @@ app.get("/calls", async (_req: Request, res: Response) => {
     return res.json({ calls });
   } catch (err: any) {
     console.error("GET /calls catch error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(err?.statusCode || 500).json({ error: err.message || "Internal server error" });
   }
 });
 
@@ -206,6 +281,7 @@ app.get("/calls", async (_req: Request, res: Response) => {
 // -----------------------------
 app.post("/calls/:id/clear", async (req: Request, res: Response) => {
   try {
+    const context = await getRestaurantContext(req);
     const callId = req.params.id;
 
     if (!callId) {
@@ -219,6 +295,7 @@ app.post("/calls/:id/clear", async (req: Request, res: Response) => {
         cleared_at: new Date().toISOString(),
       })
       .eq("id", callId)
+      .eq("restaurant_id", context.restaurantId)
       .select(`
         id,
         status,
@@ -239,7 +316,7 @@ app.post("/calls/:id/clear", async (req: Request, res: Response) => {
     return res.json(data?.[0] || { message: "Call cleared" });
   } catch (err: any) {
     console.error("POST /calls/:id/clear catch error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(err?.statusCode || 500).json({ error: err.message || "Internal server error" });
   }
 });
 
@@ -308,12 +385,14 @@ app.post("/button-press", async (req: Request, res: Response) => {
 // -----------------------------
 // GET TABLES
 // -----------------------------
-app.get("/tables", async (_req: Request, res: Response) => {
+app.get("/tables", async (req: Request, res: Response) => {
   try {
+    const context = await getRestaurantContext(req);
+
     const { data, error } = await supabase
       .from("restaurant_tables")
       .select("*")
-      .eq("restaurant_id", DEFAULT_RESTAURANT_ID)
+      .eq("restaurant_id", context.restaurantId)
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -324,19 +403,21 @@ app.get("/tables", async (_req: Request, res: Response) => {
     return res.json(data || []);
   } catch (err: any) {
     console.error("GET /tables catch error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(err?.statusCode || 500).json({ error: err.message || "Internal server error" });
   }
 });
 
 // -----------------------------
 // GET TABLES WITH AREA INFO
 // -----------------------------
-app.get("/tables-with-areas", async (_req: Request, res: Response) => {
+app.get("/tables-with-areas", async (req: Request, res: Response) => {
   try {
+    const context = await getRestaurantContext(req);
+
     const { data: tables, error: tablesError } = await supabase
       .from("restaurant_tables")
       .select("id, name, restaurant_id, coverage_area_id")
-      .eq("restaurant_id", DEFAULT_RESTAURANT_ID)
+      .eq("restaurant_id", context.restaurantId)
       .order("created_at", { ascending: true });
 
     if (tablesError) {
@@ -347,7 +428,7 @@ app.get("/tables-with-areas", async (_req: Request, res: Response) => {
     const { data: areas, error: areasError } = await supabase
       .from("coverage_areas")
       .select("id, name")
-      .eq("restaurant_id", DEFAULT_RESTAURANT_ID)
+      .eq("restaurant_id", context.restaurantId)
       .order("created_at", { ascending: true });
 
     if (areasError) {
@@ -370,7 +451,7 @@ app.get("/tables-with-areas", async (_req: Request, res: Response) => {
     return res.json(result);
   } catch (err: any) {
     console.error("GET /tables-with-areas catch error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(err?.statusCode || 500).json({ error: err.message || "Internal server error" });
   }
 });
 
@@ -379,6 +460,7 @@ app.get("/tables-with-areas", async (_req: Request, res: Response) => {
 // -----------------------------
 app.post("/tables", async (req: Request, res: Response) => {
   try {
+    const context = await getRestaurantContext(req);
     const name = normalizeString(req.body?.name);
 
     if (!name) {
@@ -389,7 +471,7 @@ app.post("/tables", async (req: Request, res: Response) => {
       .from("restaurant_tables")
       .insert({
         name,
-        restaurant_id: DEFAULT_RESTAURANT_ID,
+        restaurant_id: context.restaurantId,
       })
       .select();
 
@@ -401,7 +483,7 @@ app.post("/tables", async (req: Request, res: Response) => {
     return res.json(data?.[0]);
   } catch (err: any) {
     console.error("POST /tables catch error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(err?.statusCode || 500).json({ error: err.message || "Internal server error" });
   }
 });
 
@@ -410,6 +492,7 @@ app.post("/tables", async (req: Request, res: Response) => {
 // -----------------------------
 app.post("/tables/:id/assign-coverage-area", async (req: Request, res: Response) => {
   try {
+    const context = await getRestaurantContext(req);
     const tableId = req.params.id;
     const coverageAreaIdRaw = req.body?.coverageAreaId;
 
@@ -426,7 +509,7 @@ app.post("/tables/:id/assign-coverage-area", async (req: Request, res: Response)
       .from("restaurant_tables")
       .select("id, name, restaurant_id")
       .eq("id", tableId)
-      .eq("restaurant_id", DEFAULT_RESTAURANT_ID)
+      .eq("restaurant_id", context.restaurantId)
       .single();
 
     if (tableError || !table) {
@@ -438,7 +521,7 @@ app.post("/tables/:id/assign-coverage-area", async (req: Request, res: Response)
         .from("coverage_areas")
         .select("id, name, restaurant_id")
         .eq("id", coverageAreaId)
-        .eq("restaurant_id", DEFAULT_RESTAURANT_ID)
+        .eq("restaurant_id", context.restaurantId)
         .single();
 
       if (areaError || !area) {
@@ -452,6 +535,7 @@ app.post("/tables/:id/assign-coverage-area", async (req: Request, res: Response)
         coverage_area_id: coverageAreaId,
       })
       .eq("id", tableId)
+      .eq("restaurant_id", context.restaurantId)
       .select("id, name, coverage_area_id")
       .single();
 
@@ -460,7 +544,7 @@ app.post("/tables/:id/assign-coverage-area", async (req: Request, res: Response)
       return res.status(500).json({ error: error.message });
     }
 
-    const areaMap = await getCoverageAreaNameMap();
+    const areaMap = await getCoverageAreaNameMap(context.restaurantId);
 
     return res.json({
       ...data,
@@ -470,7 +554,7 @@ app.post("/tables/:id/assign-coverage-area", async (req: Request, res: Response)
     });
   } catch (err: any) {
     console.error("POST /tables/:id/assign-coverage-area catch error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(err?.statusCode || 500).json({ error: err.message || "Internal server error" });
   }
 });
 
@@ -479,16 +563,29 @@ app.post("/tables/:id/assign-coverage-area", async (req: Request, res: Response)
 // -----------------------------
 app.delete("/tables/:id", async (req: Request, res: Response) => {
   try {
+    const context = await getRestaurantContext(req);
     const tableId = req.params.id;
 
     if (!tableId) {
       return res.status(400).json({ error: "table id required" });
     }
 
+    const { data: table, error: tableLookupError } = await supabase
+      .from("restaurant_tables")
+      .select("id, restaurant_id")
+      .eq("id", tableId)
+      .eq("restaurant_id", context.restaurantId)
+      .single();
+
+    if (tableLookupError || !table) {
+      return res.status(404).json({ error: "table not found" });
+    }
+
     const { error: unassignButtonsError } = await supabase
       .from("buttons")
       .update({ table_id: null })
-      .eq("table_id", tableId);
+      .eq("table_id", tableId)
+      .eq("restaurant_id", context.restaurantId);
 
     if (unassignButtonsError) {
       console.error("DELETE /tables/:id unassign buttons error:", unassignButtonsError);
@@ -501,7 +598,8 @@ app.delete("/tables/:id", async (req: Request, res: Response) => {
     const { error: deleteCallsError } = await supabase
       .from("calls")
       .delete()
-      .eq("table_id", tableId);
+      .eq("table_id", tableId)
+      .eq("restaurant_id", context.restaurantId);
 
     if (deleteCallsError) {
       console.error("DELETE /tables/:id delete calls error:", deleteCallsError);
@@ -514,7 +612,8 @@ app.delete("/tables/:id", async (req: Request, res: Response) => {
     const { error: deleteTableError } = await supabase
       .from("restaurant_tables")
       .delete()
-      .eq("id", tableId);
+      .eq("id", tableId)
+      .eq("restaurant_id", context.restaurantId);
 
     if (deleteTableError) {
       console.error("DELETE /tables/:id delete table error:", deleteTableError);
@@ -531,19 +630,21 @@ app.delete("/tables/:id", async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     console.error("DELETE /tables/:id catch error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(err?.statusCode || 500).json({ error: err.message || "Internal server error" });
   }
 });
 
 // -----------------------------
 // GET COVERAGE AREAS
 // -----------------------------
-app.get("/coverage-areas", async (_req: Request, res: Response) => {
+app.get("/coverage-areas", async (req: Request, res: Response) => {
   try {
+    const context = await getRestaurantContext(req);
+
     const { data, error } = await supabase
       .from("coverage_areas")
       .select("id, restaurant_id, name, created_at")
-      .eq("restaurant_id", DEFAULT_RESTAURANT_ID)
+      .eq("restaurant_id", context.restaurantId)
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -554,7 +655,7 @@ app.get("/coverage-areas", async (_req: Request, res: Response) => {
     const { data: tables, error: tablesError } = await supabase
       .from("restaurant_tables")
       .select("id, coverage_area_id")
-      .eq("restaurant_id", DEFAULT_RESTAURANT_ID);
+      .eq("restaurant_id", context.restaurantId);
 
     if (tablesError) {
       console.error("GET /coverage-areas table count error:", tablesError);
@@ -575,7 +676,7 @@ app.get("/coverage-areas", async (_req: Request, res: Response) => {
     return res.json(result);
   } catch (err: any) {
     console.error("GET /coverage-areas catch error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(err?.statusCode || 500).json({ error: err.message || "Internal server error" });
   }
 });
 
@@ -584,6 +685,7 @@ app.get("/coverage-areas", async (_req: Request, res: Response) => {
 // -----------------------------
 app.post("/coverage-areas", async (req: Request, res: Response) => {
   try {
+    const context = await getRestaurantContext(req);
     const name = normalizeString(req.body?.name);
 
     if (!name) {
@@ -594,7 +696,7 @@ app.post("/coverage-areas", async (req: Request, res: Response) => {
       .from("coverage_areas")
       .insert({
         name,
-        restaurant_id: DEFAULT_RESTAURANT_ID,
+        restaurant_id: context.restaurantId,
       })
       .select()
       .single();
@@ -610,7 +712,7 @@ app.post("/coverage-areas", async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     console.error("POST /coverage-areas catch error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(err?.statusCode || 500).json({ error: err.message || "Internal server error" });
   }
 });
 
@@ -619,6 +721,7 @@ app.post("/coverage-areas", async (req: Request, res: Response) => {
 // -----------------------------
 app.delete("/coverage-areas/:id", async (req: Request, res: Response) => {
   try {
+    const context = await getRestaurantContext(req);
     const areaId = req.params.id;
 
     if (!areaId) {
@@ -629,7 +732,7 @@ app.delete("/coverage-areas/:id", async (req: Request, res: Response) => {
       .from("restaurant_tables")
       .update({ coverage_area_id: null })
       .eq("coverage_area_id", areaId)
-      .eq("restaurant_id", DEFAULT_RESTAURANT_ID);
+      .eq("restaurant_id", context.restaurantId);
 
     if (unassignTablesError) {
       console.error("DELETE /coverage-areas/:id unassign tables error:", unassignTablesError);
@@ -640,7 +743,7 @@ app.delete("/coverage-areas/:id", async (req: Request, res: Response) => {
       .from("coverage_areas")
       .delete()
       .eq("id", areaId)
-      .eq("restaurant_id", DEFAULT_RESTAURANT_ID);
+      .eq("restaurant_id", context.restaurantId);
 
     if (deleteError) {
       console.error("DELETE /coverage-areas/:id error:", deleteError);
@@ -650,19 +753,21 @@ app.delete("/coverage-areas/:id", async (req: Request, res: Response) => {
     return res.json({ success: true, deletedCoverageAreaId: areaId });
   } catch (err: any) {
     console.error("DELETE /coverage-areas/:id catch error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(err?.statusCode || 500).json({ error: err.message || "Internal server error" });
   }
 });
 
 // -----------------------------
 // TABLES WITH BUTTONS
 // -----------------------------
-app.get("/tables-with-buttons", async (_req: Request, res: Response) => {
+app.get("/tables-with-buttons", async (req: Request, res: Response) => {
   try {
+    const context = await getRestaurantContext(req);
+
     const { data: buttons, error: buttonsError } = await supabase
       .from("buttons")
       .select("id, table_id, restaurant_id")
-      .eq("restaurant_id", DEFAULT_RESTAURANT_ID)
+      .eq("restaurant_id", context.restaurantId)
       .order("id", { ascending: true });
 
     if (buttonsError) {
@@ -673,14 +778,14 @@ app.get("/tables-with-buttons", async (_req: Request, res: Response) => {
     const { data: tables, error: tablesError } = await supabase
       .from("restaurant_tables")
       .select("id, name, coverage_area_id")
-      .eq("restaurant_id", DEFAULT_RESTAURANT_ID);
+      .eq("restaurant_id", context.restaurantId);
 
     if (tablesError) {
       console.error("GET /tables-with-buttons tables error:", tablesError);
       return res.status(500).json({ error: tablesError.message });
     }
 
-    const areaMap = await getCoverageAreaNameMap();
+    const areaMap = await getCoverageAreaNameMap(context.restaurantId);
 
     const tableMap = new Map<string, { name: string; coverage_area_id: string | null }>();
     for (const table of tables || []) {
@@ -708,7 +813,7 @@ app.get("/tables-with-buttons", async (_req: Request, res: Response) => {
     return res.json(result);
   } catch (err: any) {
     console.error("GET /tables-with-buttons catch error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(err?.statusCode || 500).json({ error: err.message || "Internal server error" });
   }
 });
 
@@ -717,6 +822,7 @@ app.get("/tables-with-buttons", async (_req: Request, res: Response) => {
 // -----------------------------
 app.post("/buttons/assign", async (req: Request, res: Response) => {
   try {
+    const context = await getRestaurantContext(req);
     const buttonId = normalizeString(req.body?.buttonId);
     const tableId = normalizeString(req.body?.tableId);
 
@@ -728,7 +834,7 @@ app.post("/buttons/assign", async (req: Request, res: Response) => {
       .from("restaurant_tables")
       .select("id, name")
       .eq("id", tableId)
-      .eq("restaurant_id", DEFAULT_RESTAURANT_ID)
+      .eq("restaurant_id", context.restaurantId)
       .single();
 
     if (tableError || !table) {
@@ -748,11 +854,15 @@ app.post("/buttons/assign", async (req: Request, res: Response) => {
     }
 
     if (existing) {
+      if (existing.restaurant_id && existing.restaurant_id !== context.restaurantId) {
+        return res.status(403).json({ error: "button belongs to another restaurant" });
+      }
+
       const { data, error } = await supabase
         .from("buttons")
         .update({
           table_id: tableId,
-          restaurant_id: DEFAULT_RESTAURANT_ID,
+          restaurant_id: context.restaurantId,
         })
         .eq("id", buttonId)
         .select();
@@ -773,7 +883,7 @@ app.post("/buttons/assign", async (req: Request, res: Response) => {
       .insert({
         id: buttonId,
         table_id: tableId,
-        restaurant_id: DEFAULT_RESTAURANT_ID,
+        restaurant_id: context.restaurantId,
       })
       .select();
 
@@ -788,7 +898,7 @@ app.post("/buttons/assign", async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     console.error("POST /buttons/assign catch error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(err?.statusCode || 500).json({ error: err.message || "Internal server error" });
   }
 });
 
@@ -797,6 +907,7 @@ app.post("/buttons/assign", async (req: Request, res: Response) => {
 // -----------------------------
 app.post("/buttons/unassign", async (req: Request, res: Response) => {
   try {
+    const context = await getRestaurantContext(req);
     const buttonId = normalizeString(req.body?.buttonId);
 
     if (!buttonId) {
@@ -807,6 +918,7 @@ app.post("/buttons/unassign", async (req: Request, res: Response) => {
       .from("buttons")
       .update({ table_id: null })
       .eq("id", buttonId)
+      .eq("restaurant_id", context.restaurantId)
       .select();
 
     if (error) {
@@ -817,7 +929,7 @@ app.post("/buttons/unassign", async (req: Request, res: Response) => {
     return res.json(data?.[0] || { message: "Button unassigned" });
   } catch (err: any) {
     console.error("POST /buttons/unassign catch error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(err?.statusCode || 500).json({ error: err.message || "Internal server error" });
   }
 });
 
