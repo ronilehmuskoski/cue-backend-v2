@@ -13,173 +13,155 @@
       margin: 0;
       font-family: Arial, sans-serif;
       background:
-        radial-gradient(circle at top, rgba(212,175,55,0.08), transparent 35%),
-        linear-gradient(180deg, #0d0c0f 0%, #08080a 100%);
-      color: #f6e6bb;
-      min-height: 100vh;
+        radial-gradient(circle at top, rgba(212,175,55,0.10), transparent 35%),
+        linear-gradient(180deg, #0d0c0f 0%, #090909 100%);
+      color: #f5e7c1;
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1400px;
       margin: 0 auto;
-      padding: 28px 22px 60px;
+      padding: 28px 24px 60px;
     }
 
     .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 16px;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-    }
-
-    .brand-block h1 {
-      margin: 0;
-      font-size: 42px;
-      color: #fff0c7;
-      letter-spacing: 1px;
-    }
-
-    .subtext {
-      color: #b7a377;
-      margin-top: 8px;
-      font-size: 16px;
-    }
-
-    .top-actions {
-      display: flex;
-      gap: 12px;
+      display: grid;
+      grid-template-columns: 80px 1fr 220px;
       align-items: center;
-      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 28px;
     }
 
-    button {
-      border: none;
-      border-radius: 12px;
-      padding: 12px 16px;
-      font-size: 15px;
-      cursor: pointer;
-      font-weight: 800;
-    }
-
-    .refresh-btn {
-      background: #1d1b20;
-      color: #f5e8c4;
+    .back-btn {
+      width: 56px;
+      height: 56px;
       border: 1px solid rgba(212,175,55,0.18);
+      background: #1c1a1e;
+      color: #f5e8c4;
+      border-radius: 14px;
+      font-size: 30px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
     }
 
-    .refresh-btn:hover {
-      border-color: rgba(212,175,55,0.45);
+    .title-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
-    .fullscreen-btn {
-      background: #ddb455;
-      color: #17130b;
+    h1 {
+      margin: 0;
+      font-size: 58px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #fff1ca;
+      text-align: center;
     }
 
-    .fullscreen-btn:hover {
-      opacity: 0.95;
+    .top-right {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
     }
 
     .status-pill {
       display: inline-block;
-      background: rgba(74,255,149,0.08);
-      color: #89f0b1;
-      border: 1px solid rgba(74,255,149,0.25);
+      background: rgba(74, 255, 149, 0.08);
+      border: 1px solid rgba(74, 255, 149, 0.25);
+      color: #83f6ac;
       padding: 10px 14px;
       border-radius: 999px;
-      font-size: 13px;
+      font-size: 15px;
       font-weight: 700;
+      white-space: nowrap;
     }
 
     .error-box {
       display: none;
-      background: #5c1f1f;
+      background: rgba(153, 32, 32, 0.9);
       color: #ffd3d3;
-      border: 1px solid #8b2f2f;
-      border-radius: 14px;
-      padding: 14px 16px;
-      margin-bottom: 18px;
+      border: 1px solid rgba(255, 130, 130, 0.25);
+      border-radius: 18px;
+      padding: 16px 18px;
+      margin-bottom: 20px;
+      font-size: 18px;
     }
 
     .empty-state {
       background: rgba(255,255,255,0.02);
-      border: 1px dashed rgba(212,175,55,0.22);
+      border: 1px dashed rgba(212,175,55,0.18);
       border-radius: 22px;
-      padding: 40px 24px;
+      padding: 36px;
       text-align: center;
-      color: #bda87b;
+      color: #bda87a;
     }
 
     .calls-list {
       display: grid;
-      gap: 16px;
+      gap: 18px;
     }
 
     .call-card {
-      background: rgba(255,255,255,0.03);
+      background: linear-gradient(180deg, rgba(20,20,24,0.95), rgba(15,15,18,0.95));
       border: 1px solid rgba(212,175,55,0.18);
-      border-radius: 22px;
-      padding: 22px;
+      border-radius: 24px;
+      padding: 24px 26px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 18px;
       flex-wrap: wrap;
-      box-shadow: 0 16px 50px rgba(0,0,0,0.28);
+      box-shadow: 0 14px 50px rgba(0,0,0,0.26);
     }
 
     .call-left {
       display: flex;
       flex-direction: column;
-      gap: 7px;
+      gap: 12px;
       min-width: 260px;
       flex: 1;
     }
 
-    .active-badge {
-      display: inline-block;
-      background: rgba(221, 180, 85, 0.12);
-      color: #f0c55d;
-      border: 1px solid rgba(221, 180, 85, 0.35);
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-size: 12px;
-      width: fit-content;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-    }
-
     .table-name {
-      font-size: 34px;
+      font-size: 38px;
       font-weight: 800;
-      color: #fff0c7;
-      line-height: 1.2;
+      color: #fff1ca;
     }
 
     .meta {
-      color: #c7b183;
-      font-size: 18px;
+      color: #beaa80;
+      font-size: 26px;
       line-height: 1.5;
     }
 
-    .waiting {
-      color: #f0be50;
+    .active-badge {
+      display: inline-block;
+      background: rgba(212,175,55,0.12);
+      color: #f6d377;
+      border: 1px solid rgba(212,175,55,0.22);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 14px;
       font-weight: 800;
+      width: fit-content;
+      letter-spacing: 0.04em;
     }
 
     .clear-btn {
       background: #ddb455;
       color: #17130b;
-      min-width: 140px;
-      min-height: 64px;
-      font-size: 22px;
-      font-weight: 900;
-    }
-
-    .clear-btn:hover {
-      opacity: 0.95;
+      min-width: 170px;
+      min-height: 72px;
+      font-size: 28px;
+      font-weight: 800;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
     }
 
     .clear-btn:disabled {
@@ -187,19 +169,48 @@
       cursor: not-allowed;
     }
 
-    .footer-note {
-      margin-top: 22px;
-      color: #8e7c56;
-      font-size: 14px;
+    @media (max-width: 900px) {
+      .header {
+        grid-template-columns: 60px 1fr 160px;
+      }
+
+      h1 {
+        font-size: 40px;
+      }
+
+      .table-name {
+        font-size: 30px;
+      }
+
+      .meta {
+        font-size: 22px;
+      }
     }
 
     @media (max-width: 640px) {
+      .container {
+        padding: 20px 16px 40px;
+      }
+
+      .header {
+        grid-template-columns: 56px 1fr;
+      }
+
+      .top-right {
+        grid-column: 1 / -1;
+        justify-content: center;
+      }
+
+      h1 {
+        font-size: 34px;
+      }
+
       .table-name {
         font-size: 26px;
       }
 
       .meta {
-        font-size: 16px;
+        font-size: 20px;
       }
 
       .call-card {
@@ -215,34 +226,42 @@
 <body>
   <div class="container">
     <div class="header">
-      <div class="brand-block">
+      <button class="back-btn" onclick="goBackToAdmin()" aria-label="Back to admin">←</button>
+
+      <div class="title-wrap">
         <h1>ACTIVE CALLS</h1>
-        <div class="subtext">Full-screen waiter view for TV, iPad, or service station.</div>
       </div>
 
-      <div class="top-actions">
+      <div class="top-right">
         <div class="status-pill" id="lastUpdated">Last updated: --</div>
-        <button class="refresh-btn" id="refreshBtn">Refresh</button>
-        <button class="fullscreen-btn" id="fullscreenBtn">Full screen</button>
       </div>
     </div>
 
     <div class="error-box" id="errorBox"></div>
 
     <div id="content"></div>
-
-    <div class="footer-note">
-      Auto-refresh every 2 seconds
-    </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+    const SUPABASE_URL = "https://xbgvfbyhzvpwwpfwhhci.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhiZ3ZmYnloenZwd3dwZndoaGNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNDY4OTAsImV4cCI6MjA4ODcyMjg5MH0.6YqNyXxJdxJuW3hg_ACulJaNEzJAGBwRbJKDNQVSjuk";
     const API_BASE_URL = "https://cue-backend-v2.onrender.com";
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError || !sessionData?.session) {
+      window.location.href = "/admin-login.html";
+      throw new Error("No active session");
+    }
+
+    const accessToken = sessionData.session.access_token;
 
     const contentEl = document.getElementById("content");
     const errorBoxEl = document.getElementById("errorBox");
-    const refreshBtnEl = document.getElementById("refreshBtn");
-    const fullscreenBtnEl = document.getElementById("fullscreenBtn");
     const lastUpdatedEl = document.getElementById("lastUpdated");
 
     function showError(message) {
@@ -255,29 +274,6 @@
       errorBoxEl.textContent = "";
     }
 
-    function escapeHtml(value) {
-      return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-
-    function formatTime(isoString) {
-      if (!isoString) return "-";
-      const date = new Date(isoString);
-
-      return date.toLocaleString("fi-FI", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
-    }
-
     function formatAgo(isoString) {
       if (!isoString) return "-";
 
@@ -287,41 +283,68 @@
       const diffSec = Math.floor(diffMs / 1000);
 
       if (diffSec < 60) return `${diffSec}s`;
+
       const diffMin = Math.floor(diffSec / 60);
-      if (diffMin < 60) return `${diffMin} min`;
+      if (diffMin < 60) {
+        const sec = diffSec % 60;
+        return sec > 0 ? `${diffMin} min ${sec}s` : `${diffMin} min`;
+      }
+
       const diffHr = Math.floor(diffMin / 60);
-      return `${diffHr} h`;
+      const remainderMin = diffMin % 60;
+      return remainderMin > 0 ? `${diffHr} h ${remainderMin} min` : `${diffHr} h`;
+    }
+
+    async function authFetch(path, options = {}) {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+          ...(options.headers || {})
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Request failed");
+      }
+
+      return data;
     }
 
     function renderCalls(calls) {
       if (!calls || calls.length === 0) {
         contentEl.innerHTML = `
           <div class="empty-state">
-            <h2 style="margin-top: 0; color: #fff0c7;">No active calls</h2>
+            <h2 style="margin-top: 0; color: #fff1ca;">No active calls</h2>
             <p style="margin-bottom: 0;">All tables are clear right now.</p>
           </div>
         `;
         return;
       }
 
-      const cardsHtml = calls.map((call) => {
+      const sortedCalls = [...calls].sort((a, b) => {
+        return new Date(a.created_at) - new Date(b.created_at);
+      });
+
+      const cardsHtml = sortedCalls.map((call) => {
         const tableName = call.restaurant_tables?.name || "Unknown table";
-        const coverageArea = call.coverage_area_name ? ` — ${call.coverage_area_name}` : "";
+        const areaName = call.coverage_area_name ? ` — ${call.coverage_area_name}` : "";
 
         return `
           <div class="call-card">
             <div class="call-left">
               <div class="active-badge">ACTIVE</div>
-              <div class="table-name">${escapeHtml(tableName)}${escapeHtml(coverageArea)}</div>
-              <div class="meta">Created: ${escapeHtml(formatTime(call.created_at))}</div>
-              <div class="meta">Waiting: <span class="waiting">${escapeHtml(formatAgo(call.created_at))}</span></div>
-              <div class="meta">Call ID: ${escapeHtml(call.id)}</div>
+              <div class="table-name">${tableName}${areaName}</div>
+              <div class="meta">Waiting: ${formatAgo(call.created_at)}</div>
             </div>
 
             <div>
               <button
                 class="clear-btn"
-                onclick="clearCall('${escapeHtml(call.id)}', this)"
+                onclick="clearCall('${call.id}', this)"
               >
                 Clear
               </button>
@@ -337,13 +360,7 @@
       try {
         hideError();
 
-        const response = await fetch(`${API_BASE_URL}/calls`);
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || "Failed to fetch calls");
-        }
-
+        const result = await authFetch("/calls");
         renderCalls(result.calls || []);
         lastUpdatedEl.textContent = `Last updated: ${new Date().toLocaleTimeString("fi-FI")}`;
       } catch (error) {
@@ -358,15 +375,10 @@
         buttonEl.disabled = true;
         buttonEl.textContent = "Clearing...";
 
-        const response = await fetch(`${API_BASE_URL}/calls/${callId}/clear`, {
+        await authFetch(`/calls/${callId}/clear`, {
           method: "POST",
+          body: JSON.stringify({})
         });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || "Failed to clear call");
-        }
 
         await fetchCalls();
       } catch (error) {
@@ -377,22 +389,37 @@
       }
     }
 
-    async function enterFullscreen() {
+    async function goBackToAdmin() {
       try {
-        const el = document.documentElement;
-        if (el.requestFullscreen) {
-          await el.requestFullscreen();
+        if (document.fullscreenElement) {
+          await document.exitFullscreen();
         }
       } catch (error) {
-        console.error("Fullscreen failed:", error);
+        console.error("Exit fullscreen failed:", error);
+      }
+
+      window.location.href = "/admin-dashboard.html";
+    }
+
+    async function enterFullScreenOnLoad() {
+      try {
+        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch (error) {
+        console.error("Auto fullscreen failed:", error);
       }
     }
 
-    refreshBtnEl.addEventListener("click", fetchCalls);
-    fullscreenBtnEl.addEventListener("click", enterFullscreen);
+    window.clearCall = clearCall;
+    window.goBackToAdmin = goBackToAdmin;
 
     fetchCalls();
     setInterval(fetchCalls, 2000);
+
+    setTimeout(() => {
+      enterFullScreenOnLoad();
+    }, 500);
   </script>
 </body>
 </html>
