@@ -933,6 +933,54 @@ app.post("/buttons/unassign", async (req: Request, res: Response) => {
   }
 });
 
+// -----------------------------
+// DELETE BUTTON
+// -----------------------------
+app.delete("/buttons/:id", async (req: Request, res: Response) => {
+  try {
+    const context = await getRestaurantContext(req);
+    const buttonId = req.params.id;
+
+    if (!buttonId) {
+      return res.status(400).json({ error: "button id required" });
+    }
+
+    const { data: button, error: buttonLookupError } = await supabase
+      .from("buttons")
+      .select("id, restaurant_id")
+      .eq("id", buttonId)
+      .eq("restaurant_id", context.restaurantId)
+      .single();
+
+    if (buttonLookupError || !button) {
+      return res.status(404).json({ error: "button not found" });
+    }
+
+    const { error: deleteButtonError } = await supabase
+      .from("buttons")
+      .delete()
+      .eq("id", buttonId)
+      .eq("restaurant_id", context.restaurantId);
+
+    if (deleteButtonError) {
+      console.error("DELETE /buttons/:id error:", deleteButtonError);
+      return res.status(500).json({
+        error: "Failed to delete button",
+        details: deleteButtonError.message,
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Button deleted",
+      deletedButtonId: buttonId,
+    });
+  } catch (err: any) {
+    console.error("DELETE /buttons/:id catch error:", err);
+    return res.status(err?.statusCode || 500).json({ error: err.message || "Internal server error" });
+  }
+});
+
 const PORT = Number(process.env.PORT) || 3000;
 
 app.listen(PORT, () => {
