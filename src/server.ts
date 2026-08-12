@@ -206,6 +206,179 @@ async function handleButtonToggle(buttonId: string) {
 }
 
 // -----------------------------
+// FLIC CLICK-AWARE HANDLER
+// -----------------------------
+// Resolve the Flic click type from the webhook payload.
+// Priority: hold > double > single > unknown.
+function resolveClickType(body: any): "hold" | "double" | "single" | "unknown" {
+  if (body?.isHold) return "hold";
+  if (body?.isDoubleClick) return "double";
+  if (body?.isSingleClick) return "single";
+  return "unknown";
+}
+
+type ButtonEventResult = {
+  status: number;
+  body: Record<string, unknown>;
+};
+
+// New Flic behaviour (replaces the old toggle):
+//   single -> create ACTIVE call if none exists, otherwise no-op
+//   hold   -> clear the ACTIVE call (the ONLY button action that clears)
+//   double / unknown -> ignored
+// The active call is matched by table_id + restaurant_id + status="ACTIVE",
+// which is exactly what GET /calls (the dashboard) queries, so repeated
+// clicks can never spawn a second visible call for the same table.
+async function handleButtonEvent(
+  flicButtonId: string,
+  clickType: "hold" | "double" | "single" | "unknown"
+): Promise<ButtonEventResult> {
+  console.log("Flic event", { flicButtonId, clickType });
+
+  // Ignore double / unknown before touching the database.
+  if (clickType === "double" || clickType === "unknown") {
+    return {
+      status: 200,
+      body: { action: "ignored", reason: clickType },
+    };
+  }
+
+  // Look up the button. maybeSingle() -> no rows is null, not an error.
+  const { data: button, error: buttonError } = await supabase
+    .from("buttons")
+    .select("id, restaurant_id, table_id")
+    .eq("id", flicButtonId)
+    .maybeSingle();
+
+  if (buttonError) {
+    console.error("Button lookup error:", buttonError);
+    throw new Error(buttonError.message);
+  }
+
+  if (!button) {
+    const err: any = new Error("Button not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  console.log("Button found", button);
+
+  if (!button.table_id) {
+    const err: any = new Error("Button not assigned to a table");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Find the current ACTIVE call for this table (same query as the dashboard).
+  const { data: activeCall, error: activeError } = await supabase
+    .from("calls")
+    .select("id, status, created_at, table_id, restaurant_id")
+    .eq("table_id", button.table_id)
+    .eq("restaurant_id", button.restaurant_id)
+    .eq("status", "ACTIVE")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (activeError) {
+    console.error("Active call lookup error:", activeError);
+    throw new Error(activeError.message);
+  }
+
+  if (clickType === "single") {
+    if (activeCall) {
+      // A call is already showing on the dashboard: do nothing.
+      console.log("Call already active - no-op");
+      return {
+        status: 200,
+        body: { action: "already_active", message: "Call already active" },
+      };
+    }
+
+    const { data: created, error: insertError } = await supabase
+      .from("calls")
+      .insert({
+        restaurant_id: button.restaurant_id,
+        table_id: button.table_id,
+        status: "ACTIVE",
+      })
+      .select(`
+        id,
+        status,
+        created_at,
+        table_id,
+        restaurant_tables (
+          id,
+          name
+        )
+      `);
+
+    if (insertError) {
+      console.error("Create call error:", insertError);
+      throw new Error(insertError.message);
+    }
+
+    console.log("New call created");
+    return {
+      status: 201,
+      body: {
+        action: "created",
+        message: "New call created",
+        call: created?.[0] || null,
+        table_id: button.table_id,
+        restaurant_id: button.restaurant_id,
+      },
+    };
+  }
+
+  // clickType === "hold"
+  if (!activeCall) {
+    console.log("No active call to clear");
+    return {
+      status: 200,
+      body: { action: "nothing_to_clear", message: "No active call to clear" },
+    };
+  }
+
+  const { data: cleared, error: clearError } = await supabase
+    .from("calls")
+    .update({
+      status: "CLEARED",
+      cleared_at: new Date().toISOString(),
+    })
+    .eq("id", activeCall.id)
+    .eq("restaurant_id", button.restaurant_id)
+    .select(`
+      id,
+      status,
+      created_at,
+      cleared_at,
+      table_id,
+      restaurant_tables (
+        id,
+        name
+      )
+    `);
+
+  if (clearError) {
+    console.error("Clear active call error:", clearError);
+    throw new Error(clearError.message);
+  }
+
+  console.log("Active call cleared");
+  return {
+    status: 200,
+    body: {
+      action: "cleared",
+      message: "Active call cleared",
+      call: cleared?.[0] || null,
+      table_id: button.table_id,
+      restaurant_id: button.restaurant_id,
+    },
+  };
+}
+
+// -----------------------------
 // HEALTH
 // -----------------------------
 app.get("/health", (_req: Request, res: Response) => {
@@ -325,7 +498,7 @@ app.post("/calls/:id/clear", async (req: Request, res: Response) => {
 // -----------------------------
 app.post("/flic", async (req: Request, res: Response) => {
   try {
-    const buttonId = normalizeButtonId(
+    const flicButtonId = normalizeButtonId(
       req.body?.buttonId ||
       req.body?.bdaddr ||
       req.body?.button ||
@@ -333,13 +506,15 @@ app.post("/flic", async (req: Request, res: Response) => {
       req.body?.id
     );
 
-    if (!buttonId) {
+    if (!flicButtonId) {
       return res.status(400).json({ error: "buttonId missing" });
     }
 
-    const result = await handleButtonToggle(buttonId);
+    const clickType = resolveClickType(req.body);
 
-    return res.status(result.action === "created" ? 201 : 200).json(result);
+    const result = await handleButtonEvent(flicButtonId, clickType);
+
+    return res.status(result.status).json(result.body);
   } catch (err: any) {
     console.error("POST /flic catch error:", err);
 
